@@ -1,0 +1,79 @@
+# 構成の全体像
+
+CLAUDE.md の設計を、現在のコードの形で整理したものです。
+
+## 処理の流れ
+
+```
+スマホ（撮影画面）
+  1. GET  /spots/{id}              基準写真の期限つきURLを受け取る
+  2. 端末上で重なりを計算し、自動シャッターまたは手動で撮影
+  3. POST /spots/{id}/upload-url   期限つきアップロードURLを受け取る
+  4. PUT  uploads/{spotId}/{uuid}.jpg  Cloud Storage へ直接送る
+                      |
+                      | オブジェクト作成イベント（Eventarc）
+                      v
+解析処理（Cloud Run）  services/analyzer
+  ② 顔をぼかす → ぼかした写真を保存し、元画像を削除
+  ① 品質チェック（ブレ・暗さは数値、隠れ・逆光は Gemini）
+  ⑦ 季節・時間帯が近い基準写真を選ぶ
+  ④ 位置合わせ（OpenCV）
+  ⑤ 差分から候補範囲を切り出す
+  ⑥ 候補ごとに Gemini が変化の種類と位置を JSON で返す
+  ⑧ Firestore に保存。確信度がしきい値以上なら「要確認」
+                      |
+                      v
+管理画面（Firebase Hosting）  apps/admin → API（Cloud Run）  services/api
+  地図、要確認の一覧、比較表示（赤枠）、判定の確定、撮影ポイントの登録
+```
+
+処理の順序は CLAUDE.md の①②と逆で、顔のぼかしを先に行います。ぼかす前の画像を Gemini に送らないためです。
+
+## 2段階にする理由
+
+画像処理だけでは、影と割れを区別できません。Gemini だけで全体を比べると、細部を見落とし、費用も増えます。そこで、画像処理で候補を絞り、Gemini が意味を判定します。
+
+## フォルダ
+
+| フォルダ | 内容 |
+|---|---|
+| apps/capture | 観光客の撮影画面（React + Vite、PWA） |
+| apps/admin | 管理画面（React + Vite） |
+| services/api | FastAPI。観光客用と管理者用のエンドポイント |
+| services/analyzer | 解析処理。pipeline/ に各段階を1モジュールずつ置く |
+| shared/schemas | データ型（Python は models.py、TypeScript は types.ts） |
+| shared/adapters | 保存先と DB のインターフェースと、メモリ上の実装、GCP の実装 |
+| infra | Firestore と Storage のルール、インデックス、ライフサイクル、デプロイ手順 |
+| experiments | フェーズ1の精度検証用スクリプト |
+
+## 保存先と DB の差し替え（adapters）
+
+API と解析処理は、`Storage` と `Repository` というインターフェースだけに依存しています。ローカルではメモリ上の実装を使い、本番では Cloud Storage と Firestore の実装に差し替えます。費用のかかる Gemini と Vision も、設定でモックに切り替えられます。
+
+## AI の判定について
+
+AI は「要確認」を出すところまでです。「変化あり」「誤検知」「経過観察」を確定するのは管理者で、API の PATCH だけがその操作を受け付けます。比較画面には「AIの判定です。確定は管理者が行います」と表示します。
+
+## 変化の位置の座標
+
+変化の位置は、位置合わせ後の基準写真の画素座標で `{x, y, width, height}` として保存します。そのために、基準写真は登録時に長辺 2048px 以下へ縮小し、解析処理も投稿写真を同じ大きさに縮小します。Gemini の座標は `[ymin, xmin, ymax, xmax]` を 0〜1000 に正規化した値で返るので、コード側で画素座標に変換します。
+
+## CLAUDE.md のデータ設計に加えたもの
+
+- `photos` と `detections` に `siteId` を持たせています。Firestore のルールが、管理者に自分の文化財の書類だけを見せるために必要です。
+- `uploadRequests` コレクションを加えました。観光客ごと、撮影ポイントごとの投稿回数を数えるための記録で、1日で自動的に消えるよう TTL ポリシーを設定する想定です。
+- 撮影ポイントの状態に `confirmed_change`（変化あり・確定）を加えました。管理者が「変化あり」を確定した撮影ポイントを、地図でオレンジ色のまま残すためです。状態の優先順位は、要確認、変化あり（確定）、変化なしの順です。「誤検知」と「経過観察」を確定すると、ほかに待ちの判定がなければ「変化なし」に戻ります。
+- API に `GET /admin/spots`、`GET /admin/templates`、`GET /admin/detections/{id}` を加えました。管理画面の地図、登録画面、比較画面が使います。
+- `GET /spots/{id}` の応答に撮影ポイントの `location` を加えました。観光客のスマホが「撮影ポイントの近くにいるか」を端末の中だけで確かめるためです（観光客の位置は送信も保存もしません）。近いとみなす距離は `VITE_NEAR_SPOT_M`（初期値 100m。仕様に値がないため仮置き）です。離れていても撮影はできます。
+- 基準写真の管理用に `GET /admin/spots/{id}/references` と `PATCH /admin/spots/{id}/references/{refId}`（`{"active": bool}`）を加えました。使用中の基準写真が1枚だけのときは無効にできません（409）。
+- 建造物ごとにまとめるため、`groups` コレクション（`siteId`, `name`）と、撮影ポイントの `groupId` を加えました。API は `GET/POST /admin/groups` と `PATCH /admin/spots/{id}`（`{"groupId": ...}`）です。`GET /admin/spots` は、QR コード用の `captureUrl` も返します。Firestore のルールは、`groups` を自分の文化財の分だけ読めるようにしてあります。
+
+## P1 機能の状況
+
+| 機能 | 状況 |
+|---|---|
+| 傾きセンサーによる水平の補助 | 作ったが、不要との判断で撮影画面から外した（`apps/capture` に表示なし） |
+| 撮影ポイントの近くにいるかの確認 | 実装済み（通知のみ）。実機では未確認 |
+| 撮影の注意事項の表示 | 実装済み（初回に表示。右上のボタンで再表示） |
+| 季節・時間帯別の基準写真の管理 | 実装済み（管理画面の「基準写真」） |
+| 「要確認」のブラウザ通知（FCM） | 未実装。Firebase の設定と公開後でないと確かめられないため |

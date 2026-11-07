@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://REPLACE-capture-site.web.app", "https://REPLACE-admin-site.web.app", "http://localhost:5173", "http://localhost:5174"],
+    "method": ["GET", "PUT"],
+    "responseHeader": ["Content-Type", "x-goog-meta-uid"],
+    "maxAgeSeconds": 3600
+  }
+]

@@ -1,0 +1,26 @@
+.env
+.venv/
+__pycache__/
+experiments/out/
+experiments/samples_synthetic/
+experiments/samples_derived/
+ishigaki_samples/_raw/
+node_modules/
+dist/
+*.tsbuildinfo
+.env.local
+.local_data/
+experiments/out_*/
+experiments/out_*
+
+# third-party sample photos (Wikimedia etc.): large, and each has its own licence. Keep licences/metadata only.
+ishigaki_samples/images/
+ishigaki_samples/_check/
+ishigaki_change_pairs/photos/
+ishigaki_change_pairs/_raw/
+ishigaki_change_pairs/compare/
+
+# local scratch
+.playwright-mcp/
+spot*-qr.png
+*.log

@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// No client ever reads or writes Cloud Storage directly. Phones upload through short-lived signed URLs issued by
+// the API, and admins view images through signed download URLs, so these rules deny everything else.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+ "cases": [
+  {
+   "id": "P01",
+   "reference": "../../ishigaki_change_pairs/photos\\P01_A_2012-10-06_21966530.jpg",
+   "target": "../../ishigaki_change_pairs/photos\\P01_B_2026-01-15_194444827.jpg",
+   "expected": []
+  },
+  {
+   "id": "P02",
+   "reference": "../../ishigaki_change_pairs/photos\\P02_A_2014-02-22_32511040.jpg",
+   "target": "../../ishigaki_change_pairs/photos\\P02_B_2026-01-15_194444829.jpg",
+   "expected": []
+  },
+  {
+   "id": "P03",
+   "reference": "../../ishigaki_change_pairs/photos\\P03_A_2016-02-27_60362883.jpg",
+   "target": "../../ishigaki_change_pairs/photos\\P03_B_2023-01-03_127403941.jpg",
+   "expected": []
+  },
+  {
+   "id": "P04",
+   "reference": "../../ishigaki_change_pairs/photos\\P04_A_2011-04-01_14752517.jpg",
+   "target": "../../ishigaki_change_pairs/photos\\P04_B_2022-10-22_124521708.jpg",
+   "expected": []
+  },
+  {
+   "id": "P05",
+   "reference": "../../ishigaki_change_pairs/photos\\P05_A_2014-12-28_59050857.jpg",
+   "target": "../../ishigaki_change_pairs/photos\\P05_B_2022-10-22_124521709.jpg",
+   "expected": []
+  },
+  {
+   "id": "P06",
+   "reference": "../../ishigaki_change_pairs/photos\\P06_A_2016-04-18_48247335.jpg",
+   "target": "../../ishigaki_change_pairs/photos\\P06_B_2018-01-18_74332499.jpg",
+   "expected": []
+  }
+ ]
+}

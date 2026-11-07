@@ -1,0 +1,54 @@
+rules_version = '2';
+
+// Everything is denied by default. Only administrators with the custom claims
+//   role == "admin"  and  siteIds containing the document's site
+// may READ, and only the documents of their own sites. All writes come from the backend (Admin SDK bypasses
+// these rules). Tourists have no read access to photos or detections (CLAUDE.md section 8).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.get('role', '') == 'admin'; }
+    function hasSite(siteId) { return isAdmin() && siteId in request.auth.token.get('siteIds', []); }
+
+    match /sites/{siteId} {
+      allow read: if hasSite(siteId);
+      allow write: if false;
+    }
+
+    match /spots/{spotId} {
+      allow read: if hasSite(resource.data.siteId);
+      allow write: if false;
+    }
+
+    match /groups/{groupId} {
+      allow read: if hasSite(resource.data.siteId);
+      allow write: if false;
+    }
+
+    match /photos/{photoId} {
+      allow read: if hasSite(resource.data.siteId);
+      allow write: if false;
+    }
+
+    match /detections/{detectionId} {
+      allow read: if hasSite(resource.data.siteId);
+      allow write: if false; // review decisions go through PATCH /admin/detections/{id}
+    }
+
+    // references have no siteId; admins get reference images via the API's signed URLs.
+    match /references/{referenceId} {
+      allow read, write: if false;
+    }
+
+    match /templates/{templateId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // upload rate-limit log: backend only
+    match /uploadRequests/{id} {
+      allow read, write: if false;
+    }
+  }
+}
