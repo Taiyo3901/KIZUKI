@@ -24,3 +24,8 @@ ishigaki_change_pairs/compare/
 .playwright-mcp/
 spot*-qr.png
 *.log
+.pytest_cache/
+dev-dist/
+.firebase/
+firebase-debug.log
+.vite/
