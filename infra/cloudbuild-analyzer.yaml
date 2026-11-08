@@ -1,0 +1,6 @@
+# Build the analyzer image from the repository root:
+#   gcloud builds submit --config infra/cloudbuild-analyzer.yaml --substitutions _IMAGE=REGION-docker.pkg.dev/PROJECT/kizuki/analyzer .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "services/analyzer/Dockerfile", "-t", "$_IMAGE", "."]
+images: ["$_IMAGE"]

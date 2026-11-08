@@ -3,6 +3,6 @@ In the Docker image PYTHONPATH is already set and this does nothing."""
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[3]  # services/analyzer/app/__init__.py -> repository root
-if (_ROOT / "shared").is_dir() and str(_ROOT) not in sys.path:
-    sys.path.append(str(_ROOT))
+_PARENTS = Path(__file__).resolve().parents  # [app, analyzer, services, <repository root>] in the repository; shorter in the image
+if len(_PARENTS) > 3 and (_PARENTS[3] / "shared").is_dir() and str(_PARENTS[3]) not in sys.path:
+    sys.path.append(str(_PARENTS[3]))
