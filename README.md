@@ -151,3 +151,7 @@ cd ..\admin;           npm test
 - サンプル写真（`ishigaki_samples/images`、`ishigaki_change_pairs/photos`）。Wikimedia Commons などの写真で、サイズが大きく、写真ごとにライセンスが異なるためです。出典とライセンスの一覧（`licenses.csv`）だけを含めています。
 - 自分で撮った実写（`実写サンプル/`、`experiments/samples/` の写真）。人や場所が写るおそれがあるためです。
 - 仮想環境、`node_modules`、実験の出力
+
+## ライセンス
+
+[MIT License](LICENSE)。ただし `ishigaki_samples` と `ishigaki_change_pairs` の写真は、それぞれの出典のライセンスに従います（一覧は各フォルダの `licenses.csv`）。
