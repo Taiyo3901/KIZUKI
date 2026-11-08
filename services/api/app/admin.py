@@ -1,4 +1,5 @@
 """Endpoints for administrators / experts. Access is limited to the sites in the caller's `siteIds` claim."""
+import json
 import uuid
 from datetime import datetime, timezone
 
@@ -10,7 +11,7 @@ from pydantic import BaseModel
 from app.auth import Principal, check_site_access, require_admin
 from app.config import SETTINGS
 from app.deps import State, get_state
-from shared.schemas.models import REVIEW_DECISIONS, Group, LatLng, Reference, Spot
+from shared.schemas.models import REVIEW_DECISIONS, Group, GuideLayout, LatLng, Reference, Spot
 from shared.schemas.templates import BUILTIN_TEMPLATES
 
 router = APIRouter(prefix="/admin")
@@ -66,6 +67,7 @@ class SpotIn(BaseModel):
     name: str
     location: LatLng
     standingNote: str = ""
+    guideText: str = ""
     templateId: str = "stone_wall"
     groupId: str | None = None
 
@@ -82,19 +84,34 @@ def create_spot(body: SpotIn, p: Principal = Depends(require_admin), st: State =
 
 
 class SpotPatch(BaseModel):
+    """Only the fields that are sent are changed (so groupId = null means "remove from the group")."""
     groupId: str | None = None
+    guideText: str | None = None
+    guideLayout: GuideLayout | None = None  # null resets to the default arrangement
+    guideLayoutPortrait: GuideLayout | None = None
 
 
 @router.patch("/spots/{spot_id}")
 def update_spot(spot_id: str, body: SpotPatch, p: Principal = Depends(require_admin), st: State = Depends(get_state)) -> dict:
-    """Moves a spot into a group (or out of it with groupId = null)."""
+    """Moves a spot into a group (groupId = null leaves it) and/or sets its guide text."""
     spot = st.repo.get_spot(spot_id)
     if spot is None:
         raise HTTPException(404, "spot not found")
     check_site_access(p, spot.siteId)
-    _check_group(st, spot.siteId, body.groupId)
-    st.repo.update_spot(spot_id, {"groupId": body.groupId})
-    return {"spotId": spot_id, "groupId": body.groupId}
+    fields = body.model_dump(exclude_unset=True)
+    if "guideText" in fields:
+        fields["guideText"] = (fields["guideText"] or "").strip()
+    if "groupId" in fields:
+        _check_group(st, spot.siteId, fields["groupId"])
+    # a Firestore document is limited to 1 MiB, shared by both layouts
+    if len(json.dumps([fields.get("guideLayout"), fields.get("guideLayoutPortrait")])) > 900_000:
+        raise HTTPException(413, "layout too large")
+    for key, want in (("guideLayout", "landscape"), ("guideLayoutPortrait", "portrait")):
+        if fields.get(key) is not None and fields[key].get("orientation", "landscape") != want:
+            raise HTTPException(422, f"{key} must have orientation {want}")
+    if fields:
+        st.repo.update_spot(spot_id, fields)
+    return {"spotId": spot_id, **fields}
 
 
 @router.post("/spots/{spot_id}/references", status_code=201)

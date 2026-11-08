@@ -68,7 +68,7 @@ def test_public_spot_info_has_reference_urls_and_no_admin_data(env):
     c, st = env
     body = c.get(f"/spots/{spot_id(st)}").json()
     assert body["name"] and body["references"][0]["url"].startswith("http")
-    assert set(body) == {"spotId", "name", "standingNote", "location", "references"}
+    assert set(body) == {"spotId", "name", "standingNote", "guideText", "guideLayout", "guideLayoutPortrait", "location", "references"}
     assert set(body["location"]) == {"lat", "lng"}
     assert c.get("/spots/nope").status_code == 404
 
@@ -232,6 +232,27 @@ def test_groups_can_be_created_listed_and_assigned(env):
     assert st.repo.get_spot(sid).groupId is None
 
 
+def test_guide_text_is_set_by_admin_and_reaches_the_phone(env):
+    c, st = env
+    sid = spot_id(st)
+    assert c.get(f"/spots/{sid}").json()["guideText"] == ""
+    r = c.patch(f"/admin/spots/{sid}", json={"guideText": "  石垣の積み方は「打込接」です。  "}, headers=ADMIN)
+    assert r.status_code == 200
+    assert c.get(f"/spots/{sid}").json()["guideText"] == "石垣の積み方は「打込接」です。"
+    # a patch that only sets the group leaves the text alone, and vice versa
+    gid = c.post("/admin/groups", json={"siteId": "site1", "name": "G"}, headers=ADMIN).json()["groupId"]
+    c.patch(f"/admin/spots/{sid}", json={"groupId": gid}, headers=ADMIN)
+    assert c.get(f"/spots/{sid}").json()["guideText"].startswith("石垣")
+    c.patch(f"/admin/spots/{sid}", json={"guideText": ""}, headers=ADMIN)
+    assert st.repo.get_spot(sid).groupId == gid and st.repo.get_spot(sid).guideText == ""
+    # tourists cannot edit it
+    assert c.patch(f"/admin/spots/{sid}", json={"guideText": "x"}, headers=ANON).status_code == 403
+    # it can be given when a spot is created
+    body = {"siteId": "site1", "name": "新しい場所", "location": {"lat": 1, "lng": 2}, "guideText": "ここは本丸です"}
+    new_id = c.post("/admin/spots", json=body, headers=ADMIN).json()["spotId"]
+    assert c.get(f"/spots/{new_id}").json()["guideText"] == "ここは本丸です"
+
+
 def test_groups_respect_site_access(env):
     c, st = env
     add_other_site_detection(st)
@@ -266,3 +287,45 @@ def test_local_flow_upload_triggers_analysis_and_shows_up_for_admin(env):
 def test_dev_files_only_for_upload_and_reference_prefixes(env):
     c, _ = env
     assert c.put("/dev-files/photos/a/b.jpg", content=b"x").status_code == 403
+
+
+def test_guide_layout_is_set_by_admin_validated_and_reaches_the_phone(env):
+    c, st = env
+    sid = spot_id(st)
+    assert c.get(f"/spots/{sid}").json()["guideLayout"] is None
+    layout = {"version": 1, "background": "#ffffff", "items": [
+        {"id": "a", "type": "photo", "x": 0.05, "y": 0.05, "w": 0.5, "h": 0.5, "fit": "cover"},
+        {"id": "b", "type": "text", "x": 0.6, "y": 0.05, "w": 0.35, "h": 0.9, "text": "本丸の石垣", "vertical": True,
+         "fontSize": None, "color": "#1d2430", "background": None, "bold": False, "align": "start"},
+        {"id": "c", "type": "rect", "x": 0.05, "y": 0.7, "w": 0.4, "h": 0.2, "fill": "#e8eef7", "stroke": None,
+         "strokeWidth": 4, "radius": 12}]}
+    assert c.patch(f"/admin/spots/{sid}", json={"guideLayout": layout}, headers=ADMIN).status_code == 200
+    got = c.get(f"/spots/{sid}").json()["guideLayout"]
+    assert got["items"][1]["vertical"] is True and got["items"][1]["text"] == "本丸の石垣"
+    # invalid: colour, box outside 0..1, unknown type, non-image data URL, anonymous caller
+    bad_color = {**layout, "background": "red"}
+    assert c.patch(f"/admin/spots/{sid}", json={"guideLayout": bad_color}, headers=ADMIN).status_code == 422
+    bad_box = {**layout, "items": [{**layout["items"][0], "w": 1.5}]}
+    assert c.patch(f"/admin/spots/{sid}", json={"guideLayout": bad_box}, headers=ADMIN).status_code == 422
+    bad_type = {**layout, "items": [{"id": "z", "type": "script", "x": 0, "y": 0, "w": 1, "h": 1}]}
+    assert c.patch(f"/admin/spots/{sid}", json={"guideLayout": bad_type}, headers=ADMIN).status_code == 422
+    bad_img = {**layout, "items": [{"id": "i", "type": "image", "x": 0, "y": 0, "w": 1, "h": 1, "src": "https://evil.example/x.png"}]}
+    assert c.patch(f"/admin/spots/{sid}", json={"guideLayout": bad_img}, headers=ADMIN).status_code == 422
+    assert c.patch(f"/admin/spots/{sid}", json={"guideLayout": layout}, headers=ANON).status_code == 403
+    # null resets to the default arrangement
+    assert c.patch(f"/admin/spots/{sid}", json={"guideLayout": None}, headers=ADMIN).status_code == 200
+    assert c.get(f"/spots/{sid}").json()["guideLayout"] is None
+
+
+def test_portrait_layout_is_kept_separately_and_must_match_its_orientation(env):
+    c, st = env
+    sid = spot_id(st)
+    item = {"id": "a", "type": "photo", "x": 0.05, "y": 0.05, "w": 0.5, "h": 0.5, "fit": "cover"}
+    portrait = {"version": 1, "orientation": "portrait", "background": "#ffffff", "items": [item]}
+    assert c.patch(f"/admin/spots/{sid}", json={"guideLayoutPortrait": portrait}, headers=ADMIN).status_code == 200
+    got = c.get(f"/spots/{sid}").json()
+    assert got["guideLayoutPortrait"]["orientation"] == "portrait" and got["guideLayout"] is None
+    # a portrait layout in the landscape slot (and the reverse) is refused
+    assert c.patch(f"/admin/spots/{sid}", json={"guideLayout": portrait}, headers=ADMIN).status_code == 422
+    landscape = {**portrait, "orientation": "landscape"}
+    assert c.patch(f"/admin/spots/{sid}", json={"guideLayoutPortrait": landscape}, headers=ADMIN).status_code == 422

@@ -71,6 +71,7 @@ export default function SpotNewPage() {
   const [pos, setPos] = useState<Pos | null>(null);
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
+  const [guideText, setGuideText] = useState("");
   const [templateId, setTemplateId] = useState("stone_wall");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -94,7 +95,7 @@ export default function SpotNewPage() {
     }
     setBusy(true);
     try {
-      const spot = await createSpot({ siteId, name: name.trim(), standingNote: "", templateId, groupId: groupId || null, location: where });
+      const spot = await createSpot({ siteId, name: name.trim(), standingNote: "", guideText, templateId, groupId: groupId || null, location: where });
       await addReference(spot.spotId, file, "", "");
       setResult({ ...spot, name: name.trim(), qr: await QRCode.toDataURL(spot.captureUrl, { width: 640, margin: 2 }) });
     } catch {
@@ -151,6 +152,7 @@ export default function SpotNewPage() {
               <label>経度<input inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="136.8993" /></label>
             </div>
           )}
+          <label>解説文<textarea value={guideText} onChange={(e) => setGuideText(e.target.value)} rows={5} placeholder="撮影した写真と一緒に保存される案内文" /></label>
           <label>基準写真<input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
           {error && <p role="alert" className="error">{error}</p>}
         </div>

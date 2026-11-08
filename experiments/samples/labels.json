@@ -1,0 +1,52 @@
+{
+ "cases": [
+  {
+   "id": "N5375_5376",
+   "reference": "IMG_5375.jpeg",
+   "target": "IMG_5376.jpeg",
+   "expected": []
+  },
+  {
+   "id": "N5377_5378",
+   "reference": "IMG_5377.jpeg",
+   "target": "IMG_5378.jpeg",
+   "expected": []
+  },
+  {
+   "id": "N5381_5382",
+   "reference": "IMG_5381.jpeg",
+   "target": "IMG_5382.jpeg",
+   "expected": []
+  },
+  {
+   "id": "N5385_5386",
+   "reference": "IMG_5385.jpeg",
+   "target": "IMG_5386.jpeg",
+   "expected": []
+  },
+  {
+   "id": "N5389_5390",
+   "reference": "IMG_5389.jpeg",
+   "target": "IMG_5390.jpeg",
+   "expected": []
+  },
+  {
+   "id": "N5391_5392",
+   "reference": "IMG_5391.jpeg",
+   "target": "IMG_5392.jpeg",
+   "expected": []
+  },
+  {
+   "id": "N5391_5393",
+   "reference": "IMG_5391.jpeg",
+   "target": "IMG_5393.jpeg",
+   "expected": []
+  },
+  {
+   "id": "N5392_5393",
+   "reference": "IMG_5392.jpeg",
+   "target": "IMG_5393.jpeg",
+   "expected": []
+  }
+ ]
+}

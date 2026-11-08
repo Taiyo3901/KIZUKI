@@ -5,6 +5,7 @@ import { ApiError, getSpot, uploadPhoto } from "../api";
 import { captureJpeg, drawCover, SMALL_H, SMALL_W, toGray } from "../camera";
 import { config } from "../config";
 import { AutoShutter, estimateOverlap, guidance, type Gray, type Overlap } from "../overlap";
+import { composeGuideImage, hasGuide } from "../compose";
 import { photoFileName, saveToPhone } from "../save";
 import { pinchZoom, zoomRangeOf, type ZoomRange } from "../zoom";
 import { currentPosition, distanceM, formatDistance } from "../sensors";
@@ -16,7 +17,11 @@ const SEEN_KEY = "kizuki.notes.seen";
 /** After an automatic shot the shutter waits until the view has clearly moved off, so it does not fire again and again. */
 const REARM_BELOW = 0.6;
 type Phase = "loading" | "ready" | "error";
-type Shot = { id: number; blob: Blob; thumb: string; name: string; status: "sending" | "sent" | "failed"; error?: string };
+type Shot = {
+  id: number; blob: Blob; thumb: string; name: string; status: "sending" | "sent" | "failed"; error?: string;
+  /** The picture to save on the phone: the photo with the spot's guide text laid out beside it (see compose.ts). */
+  saveBlob?: Blob; saveUrl?: string;
+};
 
 function notesSeen(): boolean {
   try {
@@ -90,7 +95,6 @@ export default function CapturePage() {
   const digital = range.current.hardware ? 1 : zoom;
   const digitalRef = useRef(1);
   digitalRef.current = digital;
-
   // 1) spot info (reference photo URL)
   useEffect(() => {
     getSpot(spotId)
@@ -177,6 +181,12 @@ export default function CapturePage() {
       const shot: Shot = { id: nextShotId.current++, blob, thumb: URL.createObjectURL(blob), name: photoFileName(spotId), status: "sending" };
       setShots((all) => [...all, shot]);
       void send(shot);
+      // build the saved picture in the background, so saving later is instant (sharing needs to run right after a tap)
+      if (spot && hasGuide(spot)) {
+        void composeGuideImage(blob, spot)
+          .then((saveBlob) => patchShot(shot.id, { saveBlob, saveUrl: URL.createObjectURL(saveBlob) }))
+          .catch(() => undefined); // falls back to the plain photo
+      }
     } finally {
       shooting.current = false;
     }
@@ -295,7 +305,7 @@ export default function CapturePage() {
             {shots.length}枚目　{last.status === "sending" ? "送信中" : last.status === "sent" ? "送信済み" : last.error}
           </span>
           {last.status === "failed" && <button className="chip" onClick={() => void send(last)}>再送信</button>}
-          <button className="chip" onClick={() => void saveToPhone(last.blob, last.name)}>保存</button>
+          <button className="chip" onClick={() => void saveToPhone(last.saveBlob ?? last.blob, last.name)}>保存</button>
         </div>
       )}
 
@@ -318,9 +328,9 @@ export default function CapturePage() {
 
       {viewing && last && (
         <div className="viewer" role="dialog" aria-modal="true" aria-label="撮影した写真">
-          <img src={last.thumb} alt="" />
+          <img src={last.saveUrl ?? last.thumb} alt="" />
           <button className="viewer-close" onClick={() => setViewing(false)} aria-label="閉じる">×</button>
-          <button className="chip viewer-save" onClick={() => void saveToPhone(last.blob, last.name)}>保存</button>
+          <button className="chip viewer-save" onClick={() => void saveToPhone(last.saveBlob ?? last.blob, last.name)}>保存</button>
         </div>
       )}
       {notesOpen && <NotesSheet onClose={closeNotes} />}

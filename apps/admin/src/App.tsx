@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes, useLocation } 
 import { listDetections } from "./api";
 import { AuthProvider, useAuth } from "./auth";
 import DetectionPage from "./pages/DetectionPage";
+import LayoutPage from "./pages/LayoutPage";
 import LoginPage from "./pages/LoginPage";
 import MapPage from "./pages/MapPage";
 import QueuePage from "./pages/QueuePage";
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/queue" element={<QueuePage />} />
             <Route path="/detections/:id" element={<DetectionPage />} />
             <Route path="/spots/new" element={<SpotNewPage />} />
+            <Route path="/spots/:id/layout" element={<LayoutPage />} />
             <Route path="/spots/:id/references" element={<ReferencesPage />} />
             <Route path="*" element={<Navigate to="/map" replace />} />
           </Route>

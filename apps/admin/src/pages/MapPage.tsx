@@ -70,6 +70,10 @@ function Detail({ spot, groups, detections, onClose, onGroup }: {
         </label>
       )}
 
+      <h3>保存画像のレイアウト</h3>
+      <p className="muted">観光客が保存する画像の、写真と案内文の配置を編集します。</p>
+      <Link className="button" to={`/spots/${spot.spotId}/layout`}>レイアウトを編集</Link>
+
       <h3>最近の判定</h3>
       {mine.length === 0 ? <p className="muted">まだありません</p> : (
         <ul className="mini">

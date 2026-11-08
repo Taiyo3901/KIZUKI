@@ -1,3 +1,4 @@
+import type { GuideLayout } from "./guideLayout";
 // Shared data model (TypeScript side). Mirror of models.py — keep both in sync (CLAUDE.md section 7).
 
 /** ok = no change / needs_review = waiting for a human / confirmed_change = a human confirmed a change */
@@ -49,6 +50,9 @@ export interface Spot {
   groupId?: string | null;
   location: LatLng;
   standingNote: string;
+  guideText?: string;
+  guideLayout?: GuideLayout | null;
+  guideLayoutPortrait?: GuideLayout | null;
   templateId: string;
   status: SpotStatus;
   captureUrl: string;
@@ -93,6 +97,9 @@ export interface PublicSpot {
   spotId: string;
   name: string;
   standingNote: string;
+  guideText: string;
+  guideLayout?: GuideLayout | null;
+  guideLayoutPortrait?: GuideLayout | null;
   location: { lat: number; lng: number };
   references: { referenceId: string; url: string; season?: Season | null; timeOfDay?: TimeOfDay | null }[];
 }

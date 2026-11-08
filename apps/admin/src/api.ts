@@ -1,3 +1,4 @@
+import type { GuideLayout } from "@shared/guideLayout";
 import type { Box, DetectionStatus, ReviewDecision, SpotStatus } from "@shared/types";
 import { authHeaders } from "./auth";
 import { config } from "./config";
@@ -21,6 +22,9 @@ export interface SpotRow {
   standingNote: string;
   templateId: string;
   groupId?: string | null;
+  guideText?: string;
+  guideLayout?: GuideLayout | null;
+  guideLayoutPortrait?: GuideLayout | null;
   status: SpotStatus;
   captureUrl: string;
   location: { lat: number; lng: number };
@@ -71,6 +75,7 @@ export interface NewSpot {
   siteId: string;
   name: string;
   groupId?: string | null;
+  guideText?: string;
   standingNote: string;
   templateId: string;
   location: { lat: number; lng: number };
@@ -85,6 +90,15 @@ export const createGroup = (siteId: string, name: string) =>
 export const setSpotGroup = (spotId: string, groupId: string | null) =>
   request<{ spotId: string; groupId: string | null }>(`/admin/spots/${encodeURIComponent(spotId)}`, {
     method: "PATCH", headers: json, body: JSON.stringify({ groupId }),
+  });
+export const setSpotGuideText = (spotId: string, guideText: string) =>
+  request<{ spotId: string; guideText: string }>(`/admin/spots/${encodeURIComponent(spotId)}`, {
+    method: "PATCH", headers: json, body: JSON.stringify({ guideText }),
+  });
+/** Saves the layout for landscape and/or portrait photos; only the keys given are changed (null = back to the default). */
+export const setSpotGuideLayouts = (spotId: string, layouts: { guideLayout?: GuideLayout | null; guideLayoutPortrait?: GuideLayout | null }) =>
+  request<{ spotId: string }>(`/admin/spots/${encodeURIComponent(spotId)}`, {
+    method: "PATCH", headers: json, body: JSON.stringify(layouts),
   });
 export const listTemplates = () => request<TemplateRow[]>("/admin/templates");
 

@@ -21,7 +21,9 @@ def get_spot(spot_id: str, st: State = Depends(get_state)) -> dict:
             for r in st.repo.list_references(spot_id)]
     # `location` lets the phone check, on the phone only, whether the visitor is near the spot. It is the spot's
     # position (printed on the QR sign anyway), never the visitor's.
-    return {"spotId": spot_id, "name": spot.name, "standingNote": spot.standingNote,
+    return {"spotId": spot_id, "name": spot.name, "standingNote": spot.standingNote, "guideText": spot.guideText,
+            "guideLayout": spot.guideLayout.model_dump() if spot.guideLayout else None,
+            "guideLayoutPortrait": spot.guideLayoutPortrait.model_dump() if spot.guideLayoutPortrait else None,
             "location": spot.location.model_dump(), "references": refs}
 
 

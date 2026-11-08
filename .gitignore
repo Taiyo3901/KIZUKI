@@ -29,3 +29,9 @@ dev-dist/
 .firebase/
 firebase-debug.log
 .vite/
+
+# my own field photos (may show people / places): keep local
+/実写サンプル/
+experiments/samples/*.jpg
+experiments/samples/*.jpeg
+experiments/samples/*.png

@@ -78,7 +78,7 @@ class MemoryRepository:
         self.spots[spot_id] = self.spots[spot_id].model_copy(update={"status": status})
 
     def update_spot(self, spot_id, fields):
-        self.spots[spot_id] = self.spots[spot_id].model_copy(update=fields)
+        self.spots[spot_id] = type(self.spots[spot_id])(**{**self.spots[spot_id].model_dump(), **fields})  # validates
 
     # groups
     def get_group(self, group_id): return self.groups.get(group_id)

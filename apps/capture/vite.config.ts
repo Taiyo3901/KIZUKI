@@ -21,7 +21,6 @@ export default defineConfig(({ mode }) => {
           short_name: "見守り撮影",
           lang: "ja",
           display: "standalone",
-          orientation: "portrait",
           start_url: "/",
           background_color: "#111111",
           theme_color: "#111111",
