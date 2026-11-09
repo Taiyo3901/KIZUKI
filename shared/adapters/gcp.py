@@ -144,6 +144,12 @@ class FirestoreRepository:
         d = self._fs.collection("photos").document(photo_id).get()
         return Photo(**d.to_dict()) if d.exists else None
 
+    def find_photo_by_path(self, storage_path: str) -> Photo | None:
+        from google.cloud.firestore_v1.base_query import FieldFilter
+        for d in self._fs.collection("photos").where(filter=FieldFilter("storagePath", "==", storage_path)).limit(1).stream():
+            return Photo(**d.to_dict())
+        return None
+
     def add_photo(self, photo: Photo) -> str:
         _, r = self._fs.collection("photos").add(_dump(photo))
         return r.id

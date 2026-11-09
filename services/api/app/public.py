@@ -1,4 +1,5 @@
 """Endpoints for tourists (no login screen; anonymous Firebase users + App Check)."""
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -41,3 +42,24 @@ def create_upload_url(spot_id: str, p: Principal = Depends(get_principal), st: S
     url = st.storage.signed_upload_url(path, "image/jpeg", SETTINGS.upload_url_expires_s, headers)
     return {"uploadUrl": url, "path": path, "headers": {"Content-Type": "image/jpeg", **headers},
             "expiresInSeconds": SETTINGS.upload_url_expires_s}
+
+
+_UPLOAD_ID = re.compile(r"^[0-9a-f]{32}$")
+
+
+@router.get("/spots/{spot_id}/uploads/{upload_id}/result")
+def get_upload_result(spot_id: str, upload_id: str, p: Principal = Depends(get_principal),
+                      st: State = Depends(get_state)) -> dict:
+    """Tells a visitor whether the photo they just sent can be used, so the phone can say "please retake".
+    Only the quality verdict is shared (never the detection, which only administrators see), and only with
+    the visitor who uploaded it. `pending` = the analyzer has not recorded the photo yet."""
+    if not _UPLOAD_ID.match(upload_id):
+        raise HTTPException(404, "not found")
+    photo = st.repo.find_photo_by_path(f"photos/{spot_id}/{upload_id}.jpg")
+    if photo is None:
+        return {"state": "pending", "reasons": []}
+    if photo.uploaderUid != p.uid:
+        raise HTTPException(404, "not found")
+    if photo.quality.passed:
+        return {"state": "ok", "reasons": []}
+    return {"state": "retake", "reasons": photo.quality.reasons}
