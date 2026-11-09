@@ -110,7 +110,8 @@ button { font: inherit; color: inherit; }
 .sideways.right .ghost-control { grid-row: 3; align-self: end; }
 .sideways.left .ghost-control { grid-row: 1; align-self: start; }
 .sideways.left .side-control { grid-row: 3; align-self: end; }
-.sideways .ghost-control { display: grid; grid-template-rows: auto minmax(40px, 1fr); justify-items: center; gap: 4px; max-height: 100%; min-height: 0; font-size: .66rem; }
+.sideways .ghost-control { display: grid; grid-template-columns: auto auto; grid-template-rows: minmax(72px, 1fr); align-items: stretch; justify-content: center; column-gap: 6px; max-height: 100%; min-height: 0; font-size: .68rem; }
+.sideways .ghost-control span { align-self: center; white-space: nowrap; }
 .sideways .ghost-control span, .sideways .shot-state, .sideways .chip { writing-mode: vertical-rl; text-orientation: upright; }
 .sideways .ghost-control input { writing-mode: vertical-lr; direction: rtl; width: 28px; height: 100%; min-height: 0; margin: 0; }
 .sideways .side-control { justify-content: center; }
