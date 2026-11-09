@@ -19,7 +19,11 @@ class GcsStorage:
         self._bucket = self._client.bucket(bucket)
 
     def read(self, path: str) -> bytes:
-        return self._bucket.blob(path).download_as_bytes()
+        from google.api_core.exceptions import NotFound
+        try:
+            return self._bucket.blob(path).download_as_bytes()
+        except NotFound as e:  # the port's contract (and the analyzer's "already processed" case) is FileNotFoundError
+            raise FileNotFoundError(path) from e
 
     def write(self, path: str, data: bytes, content_type: str = "image/jpeg") -> None:
         self._bucket.blob(path).upload_from_string(data, content_type=content_type)

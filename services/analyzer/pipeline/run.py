@@ -80,8 +80,6 @@ def analyze_upload(upload_path: str, uploader_uid: str, captured_at: datetime | 
     # --- stage 2: blur faces, keep only the blurred image, delete the original
     img = _decode(d.storage.read(upload_path), s.max_edge_px)
     img, n_faces = face_blur.blur_faces(img, d.faces)
-    photo_path = f"photos/{spot_id}/{name}.jpg"
-    d.storage.write(photo_path, _jpeg(img))
     d.storage.delete(upload_path)
 
     # --- stage 1: quality
@@ -98,6 +96,10 @@ def analyze_upload(upload_path: str, uploader_uid: str, captured_at: datetime | 
         else:
             quality = Quality(passed=False, reasons=[REASON_ALIGN])
 
+    # keep the (blurred) picture only when it is usable: a failed one is not stored, only the reasons are
+    photo_path = f"photos/{spot_id}/{name}.jpg" if quality.passed else ""
+    if photo_path:
+        d.storage.write(photo_path, _jpeg(img))
     photo_id = d.repo.add_photo(Photo(siteId=spot.siteId, spotId=spot_id, storagePath=photo_path,
                                       capturedAt=captured_at, quality=quality, uploaderUid=uploader_uid))
     res = AnalysisResult("quality_failed", spot_id, photo_id, faces_blurred=n_faces, quality=quality)

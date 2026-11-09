@@ -61,10 +61,13 @@ def test_changed_photo_becomes_needs_review_and_marks_the_spot():
 
 def test_blurry_photo_stops_with_reason_and_no_detection():
     deps, spot = setup()
-    r = analyze_upload(upload(deps, spot, cv2.GaussianBlur(make_wall(), (0, 0), 12)), "uid1", NOW, deps)
+    path = upload(deps, spot, cv2.GaussianBlur(make_wall(), (0, 0), 12))
+    r = analyze_upload(path, "uid1", NOW, deps)
     assert r.outcome == "quality_failed" and r.detection_id is None
     assert "ブレ" in r.quality.reasons
-    assert deps.repo.photos[r.photo_id].quality.passed is False
+    rec = deps.repo.photos[r.photo_id]
+    assert rec.quality.passed is False and rec.storagePath == ""          # reasons kept, picture not stored
+    assert not deps.storage.exists(path) and not deps.storage.exists(f"photos/{spot}/u1.jpg")
 
 
 def test_unrelated_photo_is_recorded_as_alignment_failure():
@@ -72,6 +75,7 @@ def test_unrelated_photo_is_recorded_as_alignment_failure():
     r = analyze_upload(upload(deps, spot, make_wall(seed=99)), "uid1", NOW, deps)
     assert r.outcome == "quality_failed" and r.detection_id is None
     assert "基準写真と位置が合わない" in r.quality.reasons
+    assert not deps.storage.exists(f"photos/{spot}/u1.jpg")
 
 
 def test_faces_are_blurred_before_saving():
