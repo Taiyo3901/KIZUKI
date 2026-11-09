@@ -71,6 +71,44 @@ function arrows(o: Overlap | null, okScore: number, dead = 1) {
   return { up: o.dy < -dead, down: o.dy > dead, left: o.dx < -dead, right: o.dx > dead };
 }
 
+type Os = "ios" | "android";
+function guessOs(): Os {
+  const ua = navigator.userAgent;
+  // iPadOS reports itself as a Mac, but a Mac has no touch screen
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? "ios" : "android";
+}
+
+/** How to keep a photo on the phone. The steps differ by OS, so the visitor picks (the phone's own OS is preselected). */
+function SaveHelp() {
+  const [os, setOs] = useState<Os>(guessOs);
+  return (
+    <details className="save-help">
+      <summary>撮った写真を、スマホに保存するには</summary>
+      <p>撮影すると、直前の写真と「保存」ボタンが出ます。写真をタップすると大きく見られ、そこにも「保存」があります。案内文が設定されている撮影ポイントでは、案内文つきの画像が保存されます。</p>
+      <div className="seg" role="tablist" aria-label="スマホの種類">
+        <button role="tab" aria-selected={os === "ios"} className={os === "ios" ? "on" : ""} onClick={() => setOs("ios")}>iPhone</button>
+        <button role="tab" aria-selected={os === "android"} className={os === "android" ? "on" : ""} onClick={() => setOs("android")}>Android</button>
+      </div>
+      {os === "ios" ? (
+        <ol>
+          <li>「保存」を押すと、共有メニューが開きます。</li>
+          <li>「画像を保存」を選ぶと、写真アプリに入ります。「写真への追加を許可」と聞かれたら、許可してください。</li>
+          <li>ファイルアプリに残したいときは、「ファイルに保存」を選びます。</li>
+          <li>共有メニューを閉じたときは、もう一度「保存」を押してください。</li>
+        </ol>
+      ) : (
+        <ol>
+          <li>「保存」を押すと、共有メニューが開く機種が多いです。</li>
+          <li>一覧から、「Google フォト」や「ギャラリー」などの写真アプリを選びます。「ドライブ」や「ファイル」を選んでもかまいません。</li>
+          <li>共有メニューが開かないときは、画像が「ダウンロード」フォルダーに自動で保存されます。「ファイル」アプリの「ダウンロード」から開けます。</li>
+          <li>共有メニューを閉じたときは、もう一度「保存」を押してください。</li>
+        </ol>
+      )}
+      <p className="save-tip">それでも保存できないときは、写真を大きく表示して、画像を長押しすると、保存の選択肢が出る場合があります。</p>
+    </details>
+  );
+}
+
 function NotesSheet({ onClose }: { onClose: () => void }) {
   return (
     <div className="sheet-backdrop">
@@ -82,6 +120,7 @@ function NotesSheet({ onClose }: { onClose: () => void }) {
           <li>歩きながら撮影しないでください</li>
           <li>ほかの人が大きく写らないようにしてください</li>
         </ul>
+        <SaveHelp />
         <button className="primary" onClick={onClose} autoFocus>撮影を始める</button>
       </section>
     </div>

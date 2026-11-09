@@ -80,7 +80,7 @@ button { font: inherit; color: inherit; }
 
 /* First-visit notes: a bottom sheet over the live camera. */
 .sheet-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .55); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
-.sheet { width: 100%; max-width: 640px; background: var(--panel); border-radius: 18px 18px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); display: grid; gap: 12px; }
+.sheet { width: 100%; max-width: 640px; max-height: 88dvh; overflow-y: auto; background: var(--panel); border-radius: 18px 18px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); display: grid; gap: 12px; }
 .sheet h2 { margin: 0; font-size: 1.15rem; }
 .sheet ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; line-height: 1.6; font-size: .95rem; }
 .sheet .primary { padding: 14px; border-radius: 12px; border: 0; background: var(--aligned); color: #06210f; font-weight: 700; font-size: 1rem; cursor: pointer; }
@@ -124,3 +124,15 @@ button { font: inherit; color: inherit; }
   .sheet-backdrop { align-items: center; }
   .sheet { max-width: 520px; max-height: calc(100dvh - 24px); overflow-y: auto; border-radius: 18px; padding-bottom: 20px; }
 }
+
+/* Help: how to keep a photo on the phone (folded away until asked for). */
+.save-help { border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; background: rgba(255, 255, 255, .03); }
+.save-help summary { padding: 12px 0; cursor: pointer; font-weight: 600; font-size: .95rem; list-style-position: inside; }
+.save-help[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.save-help p { margin: 0 0 10px; font-size: .88rem; line-height: 1.65; color: var(--muted); }
+.save-help .save-tip { margin: 10px 0 14px; }
+.save-help ol { margin: 10px 0 0; padding-left: 1.4em; display: grid; gap: 8px; font-size: .92rem; line-height: 1.65; }
+.save-help .seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.save-help .seg button { padding: 9px; border: 0; background: transparent; cursor: pointer; font-weight: 600; }
+.save-help .seg button + button { border-left: 1px solid var(--line); }
+.save-help .seg button.on { background: var(--aligned); color: #06210f; }
