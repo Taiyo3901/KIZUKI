@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request
 from app.deps import build_deps
 from pipeline.run import UPLOAD_RE, analyze_upload
 
+logging.basicConfig(level=logging.INFO)  # Cloud Run shows stdout/stderr; without this the app's own INFO lines are dropped
 log = logging.getLogger("analyzer")
 app = FastAPI(title="KIZUKI analyzer")
 _deps = None
@@ -43,5 +44,5 @@ async def on_storage_event(request: Request) -> dict:
         # Already processed (the original is deleted after blurring) -> a redelivered event; nothing to do.
         log.info("upload already processed: %s", name)
         return {"ignored": name, "reason": "already processed"}
-    log.info("analyzed %s -> %s", name, res.outcome)
+    log.info("analyzed %s -> %s (faces blurred %d, objects masked %d, gemini calls %d)", name, res.outcome, res.faces_blurred, res.objects_masked, res.api_calls)
     return {"outcome": res.outcome, "photoId": res.photo_id, "detectionId": res.detection_id}

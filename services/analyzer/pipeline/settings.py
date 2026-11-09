@@ -16,6 +16,7 @@ class Settings:
     # --- backends: "mock" avoids all paid calls / "local" avoids GCP storage + DB
     judge_mode: str = os.environ.get("JUDGE_MODE", "mock")        # mock | vertex
     face_mode: str = os.environ.get("FACE_MODE", "mock")          # mock | vision
+    object_mode: str = os.environ.get("OBJECT_MODE", "mock")      # mock | vision (people / vehicles left out of the diff)
     backend: str = os.environ.get("BACKEND", "local")             # local | gcp
     bucket: str = os.environ.get("STORAGE_BUCKET", "")
     local_data_dir: str = os.environ.get("LOCAL_DATA_DIR", ".local_data")
@@ -41,6 +42,9 @@ class Settings:
     dissim_threshold: float = _f("DIFF_DISSIM_THRESHOLD", 0.55)
     min_area_ratio: float = _f("DIFF_MIN_AREA_RATIO", 0.0002)
     max_candidates: int = _i("DIFF_MAX_CANDIDATES", 5)
+    mask_object_names: str = os.environ.get("MASK_OBJECT_NAMES", "")   # "" = the default list in object_mask.py
+    object_min_score: float = _f("OBJECT_MIN_SCORE", 0.5)
+    mask_pad: float = _f("MASK_PAD", 0.1)                         # grow each masked box by this share of its size
     crop_margin: float = _f("CROP_MARGIN", 0.5)
     min_crop_px: int = _i("MIN_CROP_PX", 320)
 

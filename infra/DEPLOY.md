@@ -69,7 +69,7 @@ gcloud builds submit . --config infra/cloudbuild-api.yaml --substitutions _IMAGE
 **解析処理**（認証なしの呼び出しを許可しません）:
 
 ```
-gcloud run deploy analyzer --image <イメージ> --region asia-northeast1 --project PROJECT --service-account kizuki-analyzer@PROJECT.iam.gserviceaccount.com --no-allow-unauthenticated --cpu 1 --memory 1536Mi --concurrency 1 --timeout 300 --min-instances 0 --max-instances 3 --set-env-vars "BACKEND=gcp,JUDGE_MODE=vertex,FACE_MODE=vision,STORAGE_BUCKET=kizuki-hackathon-photos,GOOGLE_CLOUD_PROJECT=PROJECT,GOOGLE_CLOUD_LOCATION=global,GEMINI_MODEL_FAST=gemini-3.8-flash"
+gcloud run deploy analyzer --image <イメージ> --region asia-northeast1 --project PROJECT --service-account kizuki-analyzer@PROJECT.iam.gserviceaccount.com --no-allow-unauthenticated --cpu 1 --memory 1536Mi --concurrency 1 --timeout 300 --min-instances 0 --max-instances 3 --set-env-vars "BACKEND=gcp,JUDGE_MODE=vertex,FACE_MODE=vision,OBJECT_MODE=vision,STORAGE_BUCKET=kizuki-hackathon-photos,GOOGLE_CLOUD_PROJECT=PROJECT,GOOGLE_CLOUD_LOCATION=global,GEMINI_MODEL_FAST=gemini-3.8-flash"
 ```
 
 **API**（観光客が使うので、Cloud Run としては公開します。認証は API の中で、Firebase のトークンを検証します）:

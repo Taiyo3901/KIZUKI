@@ -6,7 +6,7 @@ Each stage lives in its own module and can be tested on its own (image in -> JSO
 """
 import re
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 import cv2
@@ -14,7 +14,7 @@ import numpy as np
 
 from pipeline import align as align_stage
 from pipeline import candidates as candidates_stage
-from pipeline import face_blur, judge as judge_stage, quality as quality_stage
+from pipeline import face_blur, judge as judge_stage, object_mask, quality as quality_stage
 from pipeline.select_reference import select_reference
 from pipeline.settings import SETTINGS, Settings
 from shared.adapters.ports import Repository, Storage
@@ -33,6 +33,7 @@ class Deps:
     semantic: quality_stage.SemanticQuality
     judge: judge_stage.Judge
     settings: Settings = SETTINGS
+    objects: object_mask.ObjectDetector = field(default_factory=object_mask.MockObjectDetector)
 
 
 @dataclass
@@ -42,6 +43,7 @@ class AnalysisResult:
     photo_id: str | None = None
     detection_id: str | None = None
     faces_blurred: int = 0
+    objects_masked: int = 0
     quality: Quality | None = None
     max_confidence: float = 0.0
     api_calls: int = 0
@@ -109,10 +111,13 @@ def analyze_upload(upload_path: str, uploader_uid: str, captured_at: datetime | 
         res.outcome = "no_reference"
         return res
 
+    # --- stage 4b: leave people and vehicles out of the comparison
+    ignore, res.objects_masked = object_mask.build_ignore_mask(ref_img, img, aligned.homography, d.objects, s)
+
     # --- stage 5: candidates
     cands, _ = candidates_stage.find_candidates(
         ref_img, aligned.aligned, aligned.valid_mask, dissim_threshold=s.dissim_threshold,
-        min_area_ratio=s.min_area_ratio, max_candidates=s.max_candidates)
+        min_area_ratio=s.min_area_ratio, max_candidates=s.max_candidates, ignore_mask=ignore)
 
     # --- stage 6: judge
     template = d.repo.get_template(spot.templateId) or BUILTIN_TEMPLATES.get(spot.templateId)

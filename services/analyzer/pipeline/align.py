@@ -12,6 +12,7 @@ class AlignResult:
     valid_mask: np.ndarray | None  # 255 where the warped target has real pixels
     inliers: int
     reason: str = ""
+    homography: np.ndarray | None = None   # target -> reference pixel space
 
 
 def resize_long_edge(img: np.ndarray, max_edge: int) -> np.ndarray:
@@ -52,4 +53,4 @@ def align(reference: np.ndarray, target: np.ndarray, min_inliers: int = 30) -> A
     h, w = reference.shape[:2]
     aligned = cv2.warpPerspective(target, H, (w, h), flags=cv2.INTER_LINEAR)
     valid = cv2.warpPerspective(np.full(gray_t.shape, 255, np.uint8), H, (w, h), flags=cv2.INTER_NEAREST)
-    return AlignResult(True, aligned, valid, inliers)
+    return AlignResult(True, aligned, valid, inliers, homography=H)

@@ -4,6 +4,7 @@ from pathlib import Path
 from pipeline.face_blur import MockFaceDetector, VisionFaceDetector
 from pipeline.gemini_client import GeminiClient
 from pipeline.judge import GeminiJudge, MockJudge
+from pipeline.object_mask import DEFAULT_NAMES, MockObjectDetector, VisionObjectDetector, mask_names
 from pipeline.quality import GeminiSemanticQuality, MockSemanticQuality
 from pipeline.run import Deps
 from pipeline.settings import SETTINGS, Settings
@@ -29,4 +30,5 @@ def build_deps(s: Settings = SETTINGS) -> Deps:
     judge = GeminiJudge(client) if client else MockJudge()
     semantic = GeminiSemanticQuality(client, s.gemini_model_fast) if client else MockSemanticQuality()
     faces = VisionFaceDetector() if s.face_mode == "vision" else MockFaceDetector()
-    return Deps(storage=storage, repo=repo, faces=faces, semantic=semantic, judge=judge, settings=s)
+    objects = VisionObjectDetector(mask_names(s.mask_object_names or DEFAULT_NAMES), s.object_min_score) if s.object_mode == "vision" else MockObjectDetector()
+    return Deps(storage=storage, repo=repo, faces=faces, semantic=semantic, judge=judge, settings=s, objects=objects)

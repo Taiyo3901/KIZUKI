@@ -42,8 +42,12 @@ def dissimilarity_map(reference: np.ndarray, aligned: np.ndarray) -> np.ndarray:
 
 
 def find_candidates(reference: np.ndarray, aligned: np.ndarray, valid_mask: np.ndarray, *,
-                    dissim_threshold: float, min_area_ratio: float, max_candidates: int) -> tuple[list[Candidate], np.ndarray]:
+                    dissim_threshold: float, min_area_ratio: float, max_candidates: int,
+                    ignore_mask: np.ndarray | None = None) -> tuple[list[Candidate], np.ndarray]:
+    """`ignore_mask` (255 = leave out, same size as the reference) hides things that move, e.g. people."""
     dis = dissimilarity_map(reference, aligned)
+    if ignore_mask is not None:
+        dis = np.where(ignore_mask > 0, 0.0, dis)
     # Ignore the border where the warped target has no pixels.
     safe = cv2.erode(valid_mask, np.ones((25, 25), np.uint8)) > 0
     dis = np.where(safe, dis, 0.0)

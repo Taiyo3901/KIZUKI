@@ -22,12 +22,13 @@ class OneFace:
         return [(100, 100, 80, 80)]
 
 
-def setup(faces=None):
+def setup(faces=None, objects=None):
     storage, repo = MemoryStorage(), MemoryRepository()
     spot_id = repo.add_spot(Spot(siteId="site1", name="s", location=LatLng(lat=0, lng=0), templateId="stone_wall"))
     storage.write("references/r1.jpg", jpeg(make_wall()))
     repo.add_reference(Reference(spotId=spot_id, storagePath="references/r1.jpg"))
-    deps = Deps(storage, repo, faces or MockFaceDetector(), MockSemanticQuality(), MockJudge(), Settings())
+    deps = Deps(storage, repo, faces or MockFaceDetector(), MockSemanticQuality(), MockJudge(), Settings(),
+                **({"objects": objects} if objects else {}))
     return deps, spot_id
 
 
@@ -122,3 +123,33 @@ def test_event_endpoint(monkeypatch):
     # other prefixes never trigger analysis
     assert "ignored" in c.post("/", json={"bucket": "b", "name": "photos/a/b.jpg"}).json()
     assert c.get("/healthz").json() == {"ok": True}
+
+
+class PersonOverTheChange:
+    """Reports a person standing right where the red patch is (the patch is at x 400-500, y 300-380)."""
+
+    def detect(self, jpeg_bytes, w, h):
+        return [(390, 290, 130, 110)]
+
+
+class BrokenDetector:
+    def detect(self, jpeg_bytes, w, h):
+        raise RuntimeError("Vision unavailable")
+
+
+def test_difference_under_a_detected_person_is_left_out():
+    deps, spot = setup(objects=PersonOverTheChange())
+    r = analyze_upload(upload(deps, spot, with_change(make_wall())), "uid1", NOW, deps)
+    assert r.outcome == "no_change" and r.objects_masked >= 1 and r.api_calls == 0   # no paid call either
+
+
+def test_the_same_difference_is_reported_when_nothing_is_detected():
+    deps, spot = setup()
+    r = analyze_upload(upload(deps, spot, with_change(make_wall())), "uid1", NOW, deps)
+    assert r.outcome == "needs_review" and r.objects_masked == 0
+
+
+def test_a_failing_object_detector_does_not_fail_the_analysis():
+    deps, spot = setup(objects=BrokenDetector())
+    r = analyze_upload(upload(deps, spot, with_change(make_wall())), "uid1", NOW, deps)
+    assert r.outcome == "needs_review"     # compared without a mask
