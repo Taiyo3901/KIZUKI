@@ -9,7 +9,7 @@ GDGoC Japan DevFest Hackathon 2026（観光カテゴリ）の出品作品です�
 
 | 立場 | できること |
 |---|---|
-| 観光客（スマホ） | QR コードを読み、半透明の基準写真に重ねて撮影します。重なったら自動でシャッターが切れます。撮った写真には、**管理者が設定した案内文つきの保存画像**を作れます。 |
+| 観光客（スマホ） | QR コードを読み、半透明の基準写真に重ねて撮影します。重なったら自動でシャッターが切れます。位置情報は使いません。撮った写真には、**管理者が設定した案内文つきの保存画像**を作れます。 |
 | 管理者・専門家（PC） | 地図で撮影ポイントを登録・確認します。「要確認」の写真を、赤枠つきで基準写真と比べ、判定を確定します。**保存画像のレイアウト**（写真の位置、縦書き・横書きの案内文、図形、ロゴ）を、PowerPoint のような画面で編集します。 |
 | 裏側（解析） | OpenCV で写真を位置合わせして差分を取り、変化の候補を絞ります。その候補を Gemini（Vertex AI）が判定します。 |
 
@@ -129,7 +129,7 @@ cd ..\admin;           npm test
 | `experiments` | 精度検証のスクリプト |
 | `docs` | 設計メモ、ローカル開発、デモの手順 |
 
-**ドキュメント：** [設計の前提（CLAUDE.md）](CLAUDE.md) ／ [構成の全体像](docs/architecture.md) ／ [ローカル開発](docs/local-dev.md) ／ [デモの流れ](docs/demo.md) ／ [デプロイ手順（案）](infra/DEPLOY.md)
+**ドキュメント：** [設計の前提（CLAUDE.md）](CLAUDE.md) ／ [構成の全体像](docs/architecture.md) ／ [ローカル開発](docs/local-dev.md) ／ [デモの流れ](docs/demo.md) ／ [デプロイ手順](infra/DEPLOY.md)
 
 ## 現在の状況
 
@@ -137,13 +137,15 @@ cd ..\admin;           npm test
 |---|---|
 | ローカルでの撮影 → 解析 → 管理画面での確認 | 動作確認済み |
 | 実写（名古屋城の同じ構図 8組）での誤検知 | 0 件（Gemini 呼び出し 39 回） |
-| 見逃しの検証 | 未実施（変化を加えた画像が必要） |
 | 保存画像のレイアウト編集 | ブラウザで確認済み。iPhone 実機は未確認 |
-| クラウド上の動作（Firestore・署名付きURL・Eventarc・Vision・App Check・認証・デプロイ） | **未確認** |
+| クラウドへのデプロイ（Cloud Run・Firebase Hosting・Firestore・Eventarc） | 実施済み。撮影 → 解析 → 保存まで動作を確認（[infra/DEPLOY.md](infra/DEPLOY.md)） |
+| 顔のぼかし（Vision）、品質チェック（Gemini） | クラウド上で動作を確認 |
+| 基準写真と近い写真での判定（差分 → Gemini）、見逃しの検証 | **未検証** |
+| App Check | 切っています（回数制限を回避できるため、公開を続けるなら有効化が必要） |
 | 変化の通知（FCM） | 未実装（P1） |
 | 多言語の案内文 | 後回し（日本語のみ） |
 
-実行基盤は Cloud Run と Firebase Hosting の想定です。本番にはクラウド側の設定が要ります（[infra/DEPLOY.md](infra/DEPLOY.md)）。
+実行基盤は Cloud Run と Firebase Hosting です。クラウドの手順と、実際の設定値は [infra/DEPLOY.md](infra/DEPLOY.md) にあります。
 
 ## このリポジトリに含まれないもの
 
