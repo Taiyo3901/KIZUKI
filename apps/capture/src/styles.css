@@ -91,7 +91,3 @@ button { font: inherit; color: inherit; }
 .viewer-close { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .6); color: #fff; font-size: 1.6rem; line-height: 1; cursor: pointer; }
 .viewer-save { position: absolute; bottom: calc(20px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); padding: 10px 28px; }
 
-
-.retake { width: 100%; display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #fff4e5; color: #7a4100; border: 1px solid #f0c48a; font-size: .85rem; }
-.retake b { font-size: .95rem; }
-.retake .chip { justify-self: end; }

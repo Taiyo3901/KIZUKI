@@ -109,9 +109,6 @@ class MemoryRepository:
     # photos / detections
     def get_photo(self, photo_id): return self.photos.get(photo_id)
 
-    def find_photo_by_path(self, storage_path):
-        return next((p for p in self.photos.values() if p.storagePath == storage_path), None)
-
     def add_photo(self, photo):
         pid = self._id("photo")
         self.photos[pid] = photo

@@ -1,7 +1,7 @@
 import type { PublicSpot } from "@shared/types";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { ApiError, getSpot, getUploadResult, uploadPhoto } from "../api";
+import { ApiError, getSpot, uploadPhoto } from "../api";
 import { captureJpeg, drawCover, SMALL_H, SMALL_W, toGray } from "../camera";
 import { config } from "../config";
 import { AutoShutter, estimateOverlap, guidance, type Gray, type Overlap } from "../overlap";
@@ -16,22 +16,9 @@ const RING_LEN = 2 * Math.PI * RING_R;
 const SEEN_KEY = "kizuki.notes.seen";
 /** After an automatic shot the shutter waits until the view has clearly moved off, so it does not fire again and again. */
 const REARM_BELOW = 0.6;
-/** Plain wording for the reasons the analysis can give (see services/analyzer/pipeline). */
-const RETAKE_TEXT: Record<string, string> = {
-  "ブレ": "ブレています。カメラを止めて撮ってください",
-  "暗さ": "暗すぎます。明るい向きで撮ってください",
-  "対象が隠れている": "対象が人や物で隠れています",
-  "逆光": "逆光で見えにくくなっています",
-  "基準写真と位置が合わない": "ガイドの位置と合っていません。ガイドに重ねて撮ってください",
-};
-const retakeText = (reasons: string[]) => reasons.map((r) => RETAKE_TEXT[r] ?? r).join(" / ") || "うまく撮れていませんでした";
-const CHECK_EVERY_MS = 4000;
-const CHECK_TRIES = 15;
 type Phase = "loading" | "ready" | "error";
 type Shot = {
   id: number; blob: Blob; thumb: string; name: string; status: "sending" | "sent" | "failed"; error?: string;
-  /** Set when the analysis judged the photo unusable: the visitor is asked to take it again. */
-  retake?: string[];
   /** The picture to save on the phone: the photo with the spot's guide text laid out beside it (see compose.ts). */
   saveBlob?: Blob; saveUrl?: string;
 };
@@ -80,11 +67,6 @@ export default function CapturePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const refImgRef = useRef<HTMLImageElement>(null);
   const shooting = useRef(false);
-  const alive = useRef(true);
-  useEffect(() => {
-    alive.current = true;
-    return () => { alive.current = false; };
-  }, []);
 
   const [spot, setSpot] = useState<PublicSpot | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
@@ -188,26 +170,10 @@ export default function CapturePage() {
   async function send(shot: Shot) {
     patchShot(shot.id, { status: "sending", error: undefined });
     try {
-      const uploadId = await uploadPhoto(spotId, shot.blob);
+      await uploadPhoto(spotId, shot.blob);
       patchShot(shot.id, { status: "sent" });
-      void watchResult(shot.id, uploadId);
     } catch (e) {
       patchShot(shot.id, { status: "failed", error: e instanceof ApiError && e.status === 429 ? "撮影回数の上限です" : "送信できませんでした" });
-    }
-  }
-
-  /** Polls (for about a minute) until the analysis has judged the photo; asks for a retake when it is unusable. */
-  async function watchResult(id: number, uploadId: string) {
-    for (let i = 0; i < CHECK_TRIES; i++) {
-      await new Promise((r) => setTimeout(r, CHECK_EVERY_MS));
-      if (!alive.current) return;
-      try {
-        const r = await getUploadResult(spotId, uploadId);
-        if (r.state === "retake") return patchShot(id, { retake: r.reasons });
-        if (r.state === "ok") return;
-      } catch {
-        // a lost connection must never disturb shooting; just try again
-      }
     }
   }
 
@@ -340,19 +306,11 @@ export default function CapturePage() {
       {last && (
         <div className="shot" role="status">
           <button className="thumb" onClick={() => setViewing(true)} aria-label="写真を大きく表示"><img src={last.thumb} alt="" /></button>
-          <span className={`shot-state ${last.retake ? "failed" : last.status}`}>
+          <span className={`shot-state ${last.status}`}>
             {shots.length}枚目　{last.status === "sending" ? "送信中" : last.status === "sent" ? "送信済み" : last.error}
           </span>
           {last.status === "failed" && <button className="chip" onClick={() => void send(last)}>再送信</button>}
           <button className="chip" onClick={() => void saveToPhone(last.saveBlob ?? last.blob, last.name)}>保存</button>
-        </div>
-      )}
-
-      {last?.retake && (
-        <div className="retake" role="alert">
-          <b>撮り直してください</b>
-          <span>{retakeText(last.retake)}</span>
-          <button className="chip" onClick={() => patchShot(last.id, { retake: undefined })}>閉じる</button>
         </div>
       )}
 

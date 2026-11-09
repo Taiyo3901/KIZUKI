@@ -329,21 +329,3 @@ def test_portrait_layout_is_kept_separately_and_must_match_its_orientation(env):
     assert c.patch(f"/admin/spots/{sid}", json={"guideLayout": portrait}, headers=ADMIN).status_code == 422
     landscape = {**portrait, "orientation": "landscape"}
     assert c.patch(f"/admin/spots/{sid}", json={"guideLayoutPortrait": landscape}, headers=ADMIN).status_code == 422
-
-
-# ------------------------------------------------------------ retake notice
-def test_upload_result_pending_ok_retake_and_privacy(env):
-    c, st = env
-    sid = spot_id(st)
-    up = "a" * 32
-    url = f"/spots/{sid}/uploads/{up}/result"
-    assert c.get(url, headers=ANON).json() == {"state": "pending", "reasons": []}
-    photo = Photo(siteId=SITE_ID, spotId=sid, storagePath=f"photos/{sid}/{up}.jpg", capturedAt="2026-01-01T00:00:00Z",
-                  quality=Quality(passed=False, reasons=["ブレ"]), uploaderUid="tourist1")
-    pid = st.repo.add_photo(photo)
-    assert c.get(url, headers=ANON).json() == {"state": "retake", "reasons": ["ブレ"]}
-    assert c.get(url, headers={"X-Dev-User": "anon:other"}).status_code == 404   # someone else's photo
-    assert c.get(url).status_code in (401, 403)
-    st.repo.photos[pid] = photo.model_copy(update={"quality": Quality(passed=True)})
-    assert c.get(url, headers=ANON).json() == {"state": "ok", "reasons": []}
-    assert c.get(f"/spots/{sid}/uploads/not-an-id/result", headers=ANON).status_code == 404

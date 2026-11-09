@@ -23,17 +23,8 @@ interface UploadTicket {
 }
 
 /** Ask for a short-lived URL, then PUT the JPEG straight to storage. */
-export async function uploadPhoto(spotId: string, jpeg: Blob): Promise<string> {
+export async function uploadPhoto(spotId: string, jpeg: Blob): Promise<void> {
   const t = await request<UploadTicket>(`/spots/${encodeURIComponent(spotId)}/upload-url`, { method: "POST" });
   const res = await fetch(t.uploadUrl, { method: "PUT", headers: t.headers, body: jpeg });
   if (!res.ok) throw new ApiError(res.status, "upload failed");
-  return t.path.split("/").pop()!.replace(/\.jpg$/, ""); // the upload id, used to ask how the analysis went
 }
-
-export interface UploadResult {
-  state: "pending" | "ok" | "retake";
-  reasons: string[];
-}
-
-export const getUploadResult = (spotId: string, uploadId: string) =>
-  request<UploadResult>(`/spots/${encodeURIComponent(spotId)}/uploads/${encodeURIComponent(uploadId)}/result`);
