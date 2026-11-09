@@ -103,11 +103,16 @@ button { font: inherit; color: inherit; }
 .sideways .corner.tl, .sideways .corner.tr { top: 10px; }
 .sideways .arrow.up { top: 52px; }
 
-.sideways .controls { display: flex; flex-direction: column-reverse; justify-content: space-between; align-items: center; width: 84px; padding: 14px 0; }
-.sideways.left .controls { flex-direction: column; }
-.sideways .ghost-control { display: grid; justify-items: center; gap: 6px; }
+/* three rows: the shutter is always centred on the edge, the other two sit at its ends and shrink to fit */
+.sideways .controls { display: grid; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); justify-items: center; width: 84px; padding: 12px 0; gap: 8px; }
+.sideways .controls .shutter { grid-row: 2; }
+.sideways.right .side-control { grid-row: 1; align-self: start; }
+.sideways.right .ghost-control { grid-row: 3; align-self: end; }
+.sideways.left .ghost-control { grid-row: 1; align-self: start; }
+.sideways.left .side-control { grid-row: 3; align-self: end; }
+.sideways .ghost-control { display: grid; grid-template-rows: auto minmax(40px, 1fr); justify-items: center; gap: 4px; max-height: 100%; min-height: 0; font-size: .66rem; }
 .sideways .ghost-control span, .sideways .shot-state, .sideways .chip { writing-mode: vertical-rl; text-orientation: upright; }
-.sideways .ghost-control input { writing-mode: vertical-lr; direction: rtl; width: 28px; height: 110px; }
+.sideways .ghost-control input { writing-mode: vertical-lr; direction: rtl; width: 28px; height: 100%; min-height: 0; margin: 0; }
 .sideways .side-control { justify-content: center; }
 
 .sideways .shot { flex-direction: column; justify-content: center; width: 64px; padding: 10px 0; gap: 10px; }
