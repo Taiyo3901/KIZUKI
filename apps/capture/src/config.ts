@@ -7,7 +7,6 @@ export const config = {
   autoShutterScore: Number(env.VITE_AUTO_SHUTTER_SCORE ?? 0.8),
   autoShutterHoldMs: Number(env.VITE_AUTO_SHUTTER_HOLD_MS ?? 1200),
   /** Farther than this from the spot, the visitor gets a gentle notice (never blocked). CLAUDE.md leaves the value open. */
-  nearSpotM: Number(env.VITE_NEAR_SPOT_M ?? 100),
   maxUploadEdgePx: Number(env.VITE_MAX_UPLOAD_EDGE_PX ?? 2048),
   firebase: {
     apiKey: env.VITE_FIREBASE_API_KEY as string | undefined,

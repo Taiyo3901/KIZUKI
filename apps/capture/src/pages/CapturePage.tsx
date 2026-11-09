@@ -8,7 +8,6 @@ import { AutoShutter, estimateOverlap, guidance, type Gray, type Overlap } from 
 import { composeGuideImage, hasGuide } from "../compose";
 import { photoFileName, saveToPhone } from "../save";
 import { pinchZoom, zoomRangeOf, type ZoomRange } from "../zoom";
-import { currentPosition, distanceM, formatDistance } from "../sensors";
 
 const TICK_MS = 250;
 const RING_R = 34;
@@ -82,8 +81,6 @@ export default function CapturePage() {
   const [viewing, setViewing] = useState(false);
   const viewingRef = useRef(false);
   viewingRef.current = viewing;
-  const [farFromSpot, setFarFromSpot] = useState<number | null>(null);
-  const askedPosition = useRef(false);
   const [shots, setShots] = useState<Shot[]>([]);
   const nextShotId = useRef(1);
   // Pinch zoom. `zoom` is what the visitor asked for; `digital` is the part done by cropping on the phone
@@ -150,18 +147,6 @@ export default function CapturePage() {
       setPhase("ready");
     }
   }, [camReady, spot, phase]);
-
-  // 3) position check, once, after the notes are closed so the browser's prompt follows them.
-  useEffect(() => {
-    if (!spot || notesOpen || askedPosition.current) return;
-    askedPosition.current = true;
-    currentPosition()
-      .then((here) => {
-        const d = distanceM(here, spot.location);
-        setFarFromSpot(d > config.nearSpotM ? d : null);
-      })
-      .catch(() => setFarFromSpot(null)); // declined or unavailable: simply no notice
-  }, [spot, notesOpen]);
 
   function patchShot(id: number, patch: Partial<Shot>) {
     setShots((all) => all.map((s) => (s.id === id ? { ...s, ...patch } : s)));
@@ -298,10 +283,6 @@ export default function CapturePage() {
         {arrow.right && <span className="arrow right" aria-hidden>▶</span>}
         <div className="hint" aria-live="polite">{hint}</div>
       </div>
-
-      {farFromSpot !== null && (
-        <p className="notice" role="status">撮影ポイントから{formatDistance(farFromSpot)}離れています</p>
-      )}
 
       {last && (
         <div className="shot" role="status">
