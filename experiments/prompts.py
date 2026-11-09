@@ -20,6 +20,13 @@ OLD = Template(
 )
 NEW = BUILTIN_TEMPLATES["stone_wall"]
 
+# B: NEW plus a true statement about production photos (they come straight from the phone camera). Aim: stop Gemini
+# from dismissing a real displacement as "a stitching / editing artefact".
+_FACT = "2枚とも、スマホのカメラで撮った実際の写真で、合成や画像加工は行われていません。"
+B = NEW.model_copy(update={"promptInstruction": NEW.promptInstruction.replace(
+    "あなたは城の石垣を点検する専門家の補助をしています。", "あなたは城の石垣を点検する専門家の補助をしています。" + _FACT, 1)})
+assert B.promptInstruction != NEW.promptInstruction
+
 
 def template_for(name: str) -> Template:
-    return {"old": OLD, "new": NEW}[name]
+    return {"old": OLD, "new": NEW, "b": B}[name]
