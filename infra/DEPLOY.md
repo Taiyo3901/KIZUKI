@@ -105,3 +105,13 @@ firebase deploy --only hosting
 - Eventarc から解析処理への呼び出し
 - Cloud Vision による顔のぼかし
 - App Check と匿名ログインの組み合わせ
+
+## 使うリソースを増やさない設定（実施済み）
+
+| 対象 | 設定 | ファイル／コマンド |
+|---|---|---|
+| Artifact Registry | 各イメージの新しい 3 版だけ残し、古いものは自動削除 | `infra/artifact-cleanup.json`（`gcloud artifacts repositories set-cleanup-policies kizuki --location asia-northeast1 --policy infra/artifact-cleanup.json --no-dry-run`） |
+| ビルド用バケット（`<project>_cloudbuild`） | 3 日たったソースを自動削除 | `infra/cloudbuild-bucket-lifecycle.json`（`gcloud storage buckets update gs://<project>_cloudbuild --lifecycle-file=...`） |
+| 写真バケットの `uploads/` | 1 日で自動削除（元画像） | `infra/storage-lifecycle.json` |
+| Firestore `uploadRequests`（回数制限の記録） | `expireAt`（作成の 1 日後）で自動削除 | `gcloud firestore fields ttls update expireAt --collection-group=uploadRequests --enable-ttl` |
+| Cloud Run | 使わないときは 0 台へ縮む（`analyzer`）。`api` は動作を速くするため常時 1 台。デモ後は 0 に戻す | `gcloud run services update api --min-instances 0 ...` |
