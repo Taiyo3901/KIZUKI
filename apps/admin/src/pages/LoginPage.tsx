@@ -10,8 +10,11 @@ export default function LoginPage() {
 
   return (
     <main className="login">
-      <span className="brand-mark" aria-hidden />
-      <h1>文化財見守り</h1>
+      <div>
+        <p className="brand-line">KIZUKI</p>
+        <h1>文化財見守り</h1>
+      </div>
+      <p>管理者・専門家向けの画面です。</p>
       {config.authMode === "dev" ? (
         <button className="primary" onClick={signInDev}>開発用ログイン</button>
       ) : (

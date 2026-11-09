@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listDetections, type DetectionRow } from "../api";
-import { formatDate, percent, STATUS_FILTERS } from "../utils";
+import { DETECTION_LABEL, formatDate, percent, STATUS_FILTERS } from "../utils";
+
+/** Same colours as the map's list: red = needs a look, amber = confirmed, green = no change, grey = the rest. */
+const tone = (status: string) => (status === "no_change" ? "ok" : status === "needs_review" || status === "confirmed_change" ? status : "");
 
 export default function QueuePage() {
   const [status, setStatus] = useState("needs_review");
@@ -41,18 +44,19 @@ export default function QueuePage() {
       )}
       {rows && rows.length > 0 && (
         <ul className="rows">
+          <li className="rows-head" aria-hidden>
+            <span>撮影ポイント</span><span>変化の種類</span><span>確信度</span><span>撮影日時</span><span>状態</span><span />
+          </li>
           {rows.map((r) => (
             <li key={r.id}>
-              <Link className="row-link" to={`/detections/${r.id}`}>
+              <Link className={`row-link ${tone(r.status)}`} to={`/detections/${r.id}`}>
                 <span className="spot">{r.spotName}</span>
                 <span className="cats">
                   {r.categories.length ? r.categories.map((c) => <span key={c} className="cat">{c}</span>) : <span className="muted">—</span>}
                 </span>
-                <span className="conf">
-                  <span>確信度 {percent(r.maxConfidence)}</span>
-                  <span className="conf-bar" aria-hidden><i style={{ width: percent(r.maxConfidence) }} /></span>
-                </span>
+                <span className="conf">{percent(r.maxConfidence)}</span>
                 <span className="when">{formatDate(r.createdAt)}</span>
+                <span className={`chip ${tone(r.status)}`}>{DETECTION_LABEL[r.status]}</span>
                 <span className="chev" aria-hidden>›</span>
               </Link>
             </li>

@@ -28,7 +28,7 @@ function Shell() {
   return (
     <>
       <header className="bar">
-        <span className="brand"><span className="brand-mark" aria-hidden />文化財見守り</span>
+        <span className="brand">文化財見守り<small>KIZUKI</small></span>
         <nav aria-label="メイン">
           <NavLink to="/map">地図</NavLink>
           <NavLink to="/queue">
