@@ -2,6 +2,8 @@
 
   python experiments/miss_check.py <reference.jpg> [out_dir] [--judge]
 
+--repeat N   judge every candidate N times (Gemini answers vary a little from call to call) and print the detection rate
+--prompt old|new   the stone-wall wording before / after "落書き・汚損" was added (default new)
 --judge also sends each candidate to Gemini (a paid call; needs JUDGE_MODE=vertex, GOOGLE_CLOUD_PROJECT,
 GEMINI_MODEL_FAST and application default credentials) and prints what it answers.
 
@@ -15,11 +17,15 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services" / "analyzer"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pipeline import align, candidates, judge as judge_stage  # noqa: E402
 from pipeline.settings import SETTINGS  # noqa: E402
 from shared.schemas.templates import BUILTIN_TEMPLATES  # noqa: E402
+from concurrent.futures import ThreadPoolExecutor  # noqa: E402
+from collections import Counter  # noqa: E402
+from prompts import template_for  # noqa: E402
 
 
 def read(path: Path) -> np.ndarray:
@@ -64,7 +70,19 @@ def iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
     return inter / (a[2] * a[3] + b[2] * b[3] - inter)
 
 
+def opt(name: str, default: str) -> str:
+    return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
+
+
 def _judge_and_print(judge, template, ref, aligned, cands, region=None) -> None:
+    n = int(opt("--repeat", "1"))
+    if n > 1:
+        with ThreadPoolExecutor(max_workers=5) as ex:
+            runs = list(ex.map(lambda _: judge_stage.judge_candidates(ref, aligned, cands, template, judge, SETTINGS), range(n)))
+        hits = [r.max_confidence >= SETTINGS.needs_review_threshold for r in runs]
+        cats = Counter(c.category for r in runs for c in r.changes)
+        print(f"   Gemini x{n}: detected {sum(hits)}/{n}; categories {dict(cats)}; max confidences {[round(r.max_confidence, 2) for r in runs]}")
+        return
     j = judge_stage.judge_candidates(ref, aligned, cands, template, judge, SETTINGS)
     print(f"   Gemini: {j.api_calls} call(s), max confidence {j.max_confidence:.2f}, {len(j.changes)} change(s)")
     for c in j.changes:
@@ -77,7 +95,7 @@ def _judge_and_print(judge, template, ref, aligned, cands, region=None) -> None:
 
 
 def main() -> None:
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    args = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] not in ("--repeat", "--prompt")]
     use_judge = "--judge" in sys.argv
     ref = read(Path(args[0]))
     out_dir = Path(args[1]) if len(args) > 1 else None
@@ -85,7 +103,7 @@ def main() -> None:
     if use_judge:
         from pipeline.gemini_client import GeminiClient
         judge = judge_stage.GeminiJudge(GeminiClient(SETTINGS))
-        template = BUILTIN_TEMPLATES["stone_wall"]
+        template = template_for(opt("--prompt", "new"))
     h, w = ref.shape[:2]
     print(f"reference {w}x{h}")
     # the same re-shoot for every change, so the only difference between rows is the change itself
