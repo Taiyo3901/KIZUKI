@@ -35,3 +35,7 @@ firebase-debug.log
 experiments/samples/*.jpg
 experiments/samples/*.jpeg
 experiments/samples/*.png
+
+# tool output
+.yomiyasu/
+.playwright-mcp/
