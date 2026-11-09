@@ -153,3 +153,30 @@ def test_a_failing_object_detector_does_not_fail_the_analysis():
     deps, spot = setup(objects=BrokenDetector())
     r = analyze_upload(upload(deps, spot, with_change(make_wall())), "uid1", NOW, deps)
     assert r.outcome == "needs_review"     # compared without a mask
+
+
+class FlakySemantic:
+    """Fails the first time (a dropped connection), works afterwards."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def check(self, img):
+        self.calls += 1
+        if self.calls == 1:
+            raise RuntimeError("connection dropped")
+        return []
+
+
+def test_a_crash_after_the_original_is_deleted_is_resumed_from_the_blurred_copy():
+    deps, spot = setup()
+    deps.semantic = FlakySemantic()
+    path = upload(deps, spot, reshoot(make_wall(), gain=1.1, shift=(5, 4)))
+    with pytest.raises(RuntimeError):
+        analyze_upload(path, "uid1", NOW, deps)
+    assert not deps.storage.exists(path) and deps.storage.exists(f"photos/{spot}/u1.jpg")   # nothing was lost
+    r = analyze_upload(path, "uid1", NOW, deps)                                             # the redelivered event
+    assert r.outcome == "no_change" and r.photo_id
+    with pytest.raises(FileNotFoundError):                                                   # and a third delivery is a no-op
+        analyze_upload(path, "uid1", NOW, deps)
+    assert len(deps.repo.photos) == 1

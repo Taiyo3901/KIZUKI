@@ -33,6 +33,14 @@ python -m venv .venv
 ```
 `pairs_real/labels.json` は前（A）を基準写真、後（B）を投稿写真として組んであります。変化の位置の正解は付けていないので、`evaluate.py` は使えません。結果は `out_pairs_real/results.json` と、赤枠つきの `*_overlay.jpg` で確かめます。
 
+## 本番と同じ処理で試す（費用あり）
+`miss_check.py`（足した変化がどの段階で落ちるか）と `regress_prod.py`（実写の「変化なし」の組で誤検知が出ないか）は、解析処理（`services/analyzer`）の本物の部品を使います。Gemini と、`--objects` を付けたときは Vision を呼びます。
+```
+set JUDGE_MODE=vertex & set GOOGLE_CLOUD_PROJECT=<プロジェクト ID> & set GEMINI_MODEL_FAST=<モデル名>
+python miss_check.py <基準写真.jpg> --judge
+python regress_prod.py samples\labels.json --objects
+```
+
 ## 実写のサンプルで試す
 1. `samples/` に基準写真と投稿写真を置き、`samples/labels.json` を書く（形式は `samples_synthetic/labels.json` と同じ）。
    - `expected` の `box` は基準写真に対する割合（0〜1）の `x, y, width, height`。変化なしの画像は `"expected": []`。

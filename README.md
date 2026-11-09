@@ -193,7 +193,7 @@ cd ..\admin;           npm test
 | クラウドへのデプロイ（Cloud Run・Firebase Hosting・Firestore・Eventarc） | 実施済み。撮影 → 解析 → 保存まで動作を確認（[infra/DEPLOY.md](infra/DEPLOY.md)） |
 | 顔のぼかし（Vision）、品質チェック（Gemini） | クラウド上で動作を確認 |
 | 保存画像のレイアウト編集 | ブラウザで確認済み。iPhone 実機は未確認 |
-| 見逃しの検証 | 合成した変化で一部実施（`experiments/miss_check.py`）。細いひびとずれた石は検出、平らな色の四角は Gemini が「画像加工」として見送ります。実際の損傷での検証は未実施 |
+| 見逃しの検証 | 合成した変化で一部実施（`experiments/miss_check.py`）。差分の段階は見逃しなし。Gemini は、ひび・平らなシール（落書き・汚損）を検出し、ずれた石は検出が不安定です。実写の「変化なし」8 組では誤検知 0 件（`experiments/regress_prod.py`）。実際の損傷での検証は未実施 |
 | App Check | 切っています（回数制限を回避できるため、公開を続けるなら有効化が必要） |
 | 変化の通知（FCM） | 未実装 |
 | 多言語の案内文 | 後回し（日本語のみ） |

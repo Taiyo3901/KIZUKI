@@ -80,9 +80,22 @@ def analyze_upload(upload_path: str, uploader_uid: str, captured_at: datetime | 
         return AnalysisResult("unknown_spot", spot_id)
 
     # --- stage 2: blur faces, keep only the blurred image, delete the original
-    img = _decode(d.storage.read(upload_path), s.max_edge_px)
-    img, n_faces = face_blur.blur_faces(img, d.faces)
-    d.storage.delete(upload_path)
+    blurred_path = f"photos/{spot_id}/{name}.jpg"
+    if d.repo.find_photo_by_path(blurred_path) is not None:
+        raise FileNotFoundError(upload_path)           # a redelivered event for a photo that was finished long ago
+    n_faces = 0
+    try:
+        img = _decode(d.storage.read(upload_path), s.max_edge_px)
+        img, n_faces = face_blur.blur_faces(img, d.faces)
+        d.storage.write(blurred_path, _jpeg(img))
+        d.storage.delete(upload_path)
+    except FileNotFoundError:
+        # The original is gone. If the blurred copy is there, an earlier run crashed after saving it (Gemini, network...):
+        # carry on from that copy. Otherwise there is nothing to do (already finished, or never existed).
+        if not d.storage.exists(blurred_path):
+            raise
+        img = _decode(d.storage.read(blurred_path), s.max_edge_px)
+    # The blurred copy is saved BEFORE anything that can fail, so a crash after the original's deletion loses nothing.
 
     # --- stage 1: quality
     quality = quality_stage.run_quality(img, d.semantic, s)
@@ -100,8 +113,8 @@ def analyze_upload(upload_path: str, uploader_uid: str, captured_at: datetime | 
 
     # keep the (blurred) picture only when it is usable: a failed one is not stored, only the reasons are
     photo_path = f"photos/{spot_id}/{name}.jpg" if quality.passed else ""
-    if photo_path:
-        d.storage.write(photo_path, _jpeg(img))
+    if not quality.passed:
+        d.storage.delete(f"photos/{spot_id}/{name}.jpg")   # unusable: only the reasons are kept, not the picture
     photo_id = d.repo.add_photo(Photo(siteId=spot.siteId, spotId=spot_id, storagePath=photo_path,
                                       capturedAt=captured_at, quality=quality, uploaderUid=uploader_uid))
     res = AnalysisResult("quality_failed", spot_id, photo_id, faces_blurred=n_faces, quality=quality)

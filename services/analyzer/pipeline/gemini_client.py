@@ -5,6 +5,13 @@ import time
 from pipeline.settings import Settings
 
 
+def _transient(e: Exception) -> bool:
+    """A dropped or timed-out connection (httpx / httpcore / OS level) is worth another try, like a 429 or 5xx."""
+    if isinstance(e, (ConnectionError, TimeoutError)):
+        return True
+    return type(e).__module__.split(".")[0] in ("httpx", "httpx2", "httpcore")
+
+
 class GeminiClient:
     def __init__(self, s: Settings):
         from google import genai
@@ -25,8 +32,10 @@ class GeminiClient:
             try:
                 resp = self._client.models.generate_content(model=model, contents=contents, config=config)
                 return json.loads(resp.text)
-            except (errors.ClientError, errors.ServerError) as e:
-                if getattr(e, "code", 0) not in (429, 500, 503) or attempt == 6:
+            except Exception as e:  # noqa: BLE001
+                api_error = isinstance(e, (errors.ClientError, errors.ServerError))
+                retryable = getattr(e, "code", 0) in (429, 500, 503) if api_error else _transient(e)
+                if not retryable or attempt == 6:
                     raise
                 time.sleep(delay)
                 delay = min(delay * 2, 120)
