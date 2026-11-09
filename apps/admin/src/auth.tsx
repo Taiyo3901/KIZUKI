@@ -2,6 +2,8 @@
  * Admin sign-in.
  * firebase mode: Google account (the custom claims role / siteIds are set on the server side).
  * dev mode: a fake admin accepted by the local API's X-Dev-User header.
+ * open mode (demo): no login screen. The page signs in anonymously by itself; the API treats any signed-in user as an
+ *   administrator only when it runs with ADMIN_OPEN=on (see services/api/app/auth.py).
  */
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { config } from "./config";
@@ -39,7 +41,9 @@ function firebase() {
 /** Headers for API calls. */
 export async function authHeaders(): Promise<Record<string, string>> {
   if (config.authMode === "dev") return { "X-Dev-User": `admin:admin-dev:${config.devSiteIds.join(",")}` };
-  const { auth } = await firebase();
+  const { mod, auth } = await firebase();
+  await auth.authStateReady(); // wait until a signed-in user saved by an earlier visit has been restored
+  if (!auth.currentUser && config.authMode === "open") await mod.signInAnonymously(auth);
   if (!auth.currentUser) throw new Error("not signed in");
   return { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` };
 }
@@ -72,9 +76,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     let off = () => {};
-    void firebase().then(({ mod, auth }) => {
+    void firebase().then(async ({ mod, auth }) => {
+      await auth.authStateReady();   // otherwise every visit would create one more anonymous user
+      if (config.authMode === "open" && !auth.currentUser) {
+        try {
+          await mod.signInAnonymously(auth);
+        } catch {
+          /* the screen then shows the login page, which in open mode explains the problem */
+        }
+      }
       off = mod.onAuthStateChanged(auth, (u) => {
-        setUser(u ? { uid: u.uid, name: u.displayName ?? u.email ?? u.uid } : null);
+        setUser(u ? { uid: u.uid, name: u.displayName ?? u.email ?? (u.isAnonymous ? "ゲスト" : u.uid) } : null);
         setReady(true);
       });
     });

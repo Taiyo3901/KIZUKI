@@ -2,7 +2,7 @@ const env = import.meta.env;
 
 export const config = {
   apiBase: (env.VITE_API_BASE as string | undefined) ?? "http://localhost:8080",
-  authMode: ((env.VITE_AUTH_MODE as string | undefined) ?? "dev") as "dev" | "firebase",
+  authMode: ((env.VITE_AUTH_MODE as string | undefined) ?? "dev") as "dev" | "firebase" | "open",
   devSiteIds: ((env.VITE_DEV_SITE_IDS as string | undefined) ?? "site1").split(",").filter(Boolean),
   mapsKey: (env.VITE_GOOGLE_MAPS_API_KEY as string | undefined) ?? "",
   firebase: {

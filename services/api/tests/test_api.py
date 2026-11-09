@@ -328,3 +328,41 @@ def test_portrait_layout_is_kept_separately_and_must_match_its_orientation(env):
     assert c.patch(f"/admin/spots/{sid}", json={"guideLayout": portrait}, headers=ADMIN).status_code == 422
     landscape = {**portrait, "orientation": "landscape"}
     assert c.patch(f"/admin/spots/{sid}", json={"guideLayoutPortrait": landscape}, headers=ADMIN).status_code == 422
+
+
+# ------------------------------------------------------------ open admin (demo mode)
+def _firebase_principal(monkeypatch, claims, open_on, sites="site1"):
+    """get_principal in firebase mode with a faked token check."""
+    from dataclasses import replace
+
+    from firebase_admin import auth as fb_auth
+
+    from app import auth as app_auth
+    monkeypatch.setattr(app_auth, "SETTINGS", replace(SETTINGS, auth_mode="firebase", admin_open=open_on, admin_open_site_ids=sites))
+    monkeypatch.setattr(app_auth, "_firebase", lambda: None)
+    monkeypatch.setattr(fb_auth, "verify_id_token", lambda t: claims if t == "good" else (_ for _ in ()).throw(ValueError("bad")))
+    return app_auth.get_principal(authorization="Bearer good")
+
+
+def test_admin_open_is_off_by_default_and_an_anonymous_user_is_not_an_admin(monkeypatch):
+    p = _firebase_principal(monkeypatch, {"uid": "tourist"}, open_on=False)
+    assert not p.is_admin and p.site_ids == []
+
+
+def test_admin_open_makes_any_signed_in_user_an_admin_of_the_open_sites(monkeypatch):
+    p = _firebase_principal(monkeypatch, {"uid": "tourist"}, open_on=True, sites="site1, site2")
+    assert p.is_admin and p.site_ids == ["site1", "site2"]
+    q = _firebase_principal(monkeypatch, {"uid": "a", "role": "admin", "siteIds": ["siteX"]}, open_on=True)
+    assert set(q.site_ids) == {"siteX", "site1"}      # a real admin keeps their own sites
+
+
+def test_admin_open_still_needs_a_valid_token(monkeypatch):
+    from dataclasses import replace
+
+    from fastapi import HTTPException
+
+    from app import auth as app_auth
+    monkeypatch.setattr(app_auth, "SETTINGS", replace(SETTINGS, auth_mode="firebase", admin_open=True))
+    with pytest.raises(HTTPException) as e:
+        app_auth.get_principal(authorization=None)
+    assert e.value.status_code == 401

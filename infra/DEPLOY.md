@@ -128,6 +128,22 @@ gcloud eventarc triggers create analyzer-trigger --location=asia-northeast1 --ev
    npx firebase-tools deploy --only hosting --project PROJECT
    ```
 
+## 管理画面の公開モード（デモ用・現在は有効）
+
+審査員が、ログインなしで管理画面を試せるよう、公開モードにしています。**誰でも、撮影ポイントの登録、判定の確定、基準写真の差し替え、保存画像のレイアウトの編集ができます。** 審査の期間が終わったら、元に戻してください。
+
+| | 公開モード（現在） | 通常（管理者だけ） |
+|---|---|---|
+| API の環境変数 | `ADMIN_OPEN=on`、`ADMIN_OPEN_SITE_IDS=site1` | 設定しない（または `ADMIN_OPEN=off`） |
+| 管理画面のビルド | `VITE_AUTH_MODE=open`（ログイン画面なし。自動で匿名ログイン） | `VITE_AUTH_MODE=firebase`（Google ログイン） |
+
+- 公開モードでも、有効な Firebase のトークン（匿名を含む）が必要です。トークンのない呼び出しは、401 で拒否します。
+- 元に戻す手順：
+  ```
+  gcloud run services update api --update-env-vars ADMIN_OPEN=off --region asia-northeast1 --project PROJECT
+  ```
+  そのあと、`VITE_AUTH_MODE=firebase` で管理画面をビルドし、`npx firebase-tools deploy --only hosting:admin --project PROJECT` で公開します。
+
 ## App Check（現状は切ってあります）
 
 `APP_CHECK=off` で動かしています。reCAPTCHA Enterprise の準備をしていないためです。**切っている間は、匿名ログインを作り直すと、投稿の回数制限（1 人 10 回／時間）を回避できます。** 公開を続けるなら、reCAPTCHA Enterprise のサイトキーを作り、撮影画面の `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` に入れて、API を `APP_CHECK=on` にします（撮影画面は、サイトキーがあるときだけ App Check を使います）。

@@ -2,6 +2,7 @@
 
 firebase mode: Firebase ID token in `Authorization: Bearer`. Tourists are anonymous users; admins carry the
 custom claims role="admin" and siteIds=[...] (CLAUDE.md section 8). App Check token in `X-Firebase-AppCheck`.
+ADMIN_OPEN=on (demo only): every signed-in user, anonymous ones too, is an administrator of ADMIN_OPEN_SITE_IDS.
 dev mode (local only): `X-Dev-User: anon:<uid>` or `X-Dev-User: admin:<uid>:<siteId>,<siteId>`.
 """
 from dataclasses import dataclass, field
@@ -49,8 +50,12 @@ def get_principal(authorization: str | None = Header(None), x_dev_user: str | No
         claims = auth.verify_id_token(authorization.split(" ", 1)[1])
     except Exception:
         raise HTTPException(401, "invalid token")
-    return Principal(uid=claims["uid"], is_admin=claims.get("role") == "admin",
-                     site_ids=list(claims.get("siteIds", [])))
+    is_admin = claims.get("role") == "admin"
+    site_ids = list(claims.get("siteIds", []))
+    if SETTINGS.admin_open:   # demo mode: any valid token (anonymous too) may use the admin screen for the open sites
+        is_admin = True
+        site_ids = sorted(set(site_ids) | {s.strip() for s in SETTINGS.admin_open_site_ids.split(",") if s.strip()})
+    return Principal(uid=claims["uid"], is_admin=is_admin, site_ids=site_ids)
 
 
 def require_admin(p: Principal = Depends(get_principal)) -> Principal:

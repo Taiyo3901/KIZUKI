@@ -12,6 +12,10 @@ class Settings:
     backend: str = os.environ.get("BACKEND", "local")              # local | gcp
     auth_mode: str = os.environ.get("AUTH_MODE", "dev")            # dev | firebase
     app_check: bool = os.environ.get("APP_CHECK", "off") == "on"   # verify Firebase App Check on upload-url
+    # OPEN ADMIN (demo only): when "on", every signed-in Firebase user (anonymous ones included) is an administrator of
+    # ADMIN_OPEN_SITE_IDS. Off by default; turning it on lets anyone who can open the admin screen change the data.
+    admin_open: bool = os.environ.get("ADMIN_OPEN", "off") == "on"
+    admin_open_site_ids: str = os.environ.get("ADMIN_OPEN_SITE_IDS", "site1")
     bucket: str = os.environ.get("STORAGE_BUCKET", "")
     gcp_project: str = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
     capture_base_url: str = os.environ.get("CAPTURE_BASE_URL", "http://localhost:5173")

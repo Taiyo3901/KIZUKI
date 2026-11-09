@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { listDetections } from "./api";
 import { AuthProvider, useAuth } from "./auth";
+import { config } from "./config";
 import DetectionPage from "./pages/DetectionPage";
 import LayoutPage from "./pages/LayoutPage";
 import LoginPage from "./pages/LoginPage";
@@ -37,7 +38,7 @@ function Shell() {
           </NavLink>
         </nav>
         <span className="grow" />
-        <button onClick={() => void signOut()}>ログアウト</button>
+        {config.authMode !== "open" && <button onClick={() => void signOut()}>ログアウト</button>}
       </header>
       <Outlet />
     </>
