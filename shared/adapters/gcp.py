@@ -11,8 +11,11 @@ from shared.schemas.models import Detection, Group, Photo, Reference, Site, Spot
 
 class GcsStorage:
     def __init__(self, bucket: str):
+        import google.auth
         from google.cloud import storage
-        self._client = storage.Client()
+        # cloud-platform scope: the IAM signBlob call used for signed URLs is refused with Storage-only scopes
+        creds, project = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        self._client = storage.Client(credentials=creds, project=project)
         self._bucket = self._client.bucket(bucket)
 
     def read(self, path: str) -> bytes:

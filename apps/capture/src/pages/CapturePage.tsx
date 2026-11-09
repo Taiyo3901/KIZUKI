@@ -70,6 +70,7 @@ export default function CapturePage() {
 
   const [spot, setSpot] = useState<PublicSpot | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
+  const [camReady, setCamReady] = useState(false);
   const [error, setError] = useState("");
   const [hint, setHint] = useState("カメラを起動しています…");
   const [progress, setProgress] = useState(0);
@@ -107,9 +108,8 @@ export default function CapturePage() {
     setPhase("error");
   }
 
-  // 2) camera
+  // 2) camera: started at once, in parallel with the spot request (sign-in and a cold API start can take seconds)
   useEffect(() => {
-    if (!spot) return;
     // `cancelled` makes a superseded run (React re-runs effects in development) stop quietly: its stream is
     // released and its late results are ignored, instead of interrupting the newer run's video.play().
     let cancelled = false;
@@ -132,10 +132,7 @@ export default function CapturePage() {
         const v = videoRef.current!;
         v.srcObject = s;
         await v.play();
-        if (!cancelled) {
-          setHint("ガイドを読み込んでいます…");
-          setPhase("ready");
-        }
+        if (!cancelled) setCamReady(true);
       })
       .catch(() => {
         if (!cancelled) fail("カメラを使えません。許可を確認してください");
@@ -144,7 +141,15 @@ export default function CapturePage() {
       cancelled = true;
       stream?.getTracks().forEach((t) => t.stop());
     };
-  }, [spot]);
+  }, []);
+
+  // ready = camera running AND the spot (reference photo) loaded
+  useEffect(() => {
+    if (camReady && spot && phase === "loading") {
+      setHint("ガイドを読み込んでいます…");
+      setPhase("ready");
+    }
+  }, [camReady, spot, phase]);
 
   // 3) position check, once, after the notes are closed so the browser's prompt follows them.
   useEffect(() => {

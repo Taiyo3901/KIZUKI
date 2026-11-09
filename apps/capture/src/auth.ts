@@ -9,17 +9,17 @@ function initFirebase() {
       await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/app-check")]);
     const f = config.firebase;
     const app = initializeApp({ apiKey: f.apiKey, authDomain: f.authDomain, projectId: f.projectId, appId: f.appId });
-    const appCheck = initializeAppCheck(app, {
-      provider: new ReCaptchaEnterpriseProvider(f.recaptchaSiteKey ?? ""),
-      isTokenAutoRefreshEnabled: true,
-    });
+    // App Check only when a site key is configured (the API accepts requests without it while APP_CHECK=off)
+    const appCheck = f.recaptchaSiteKey
+      ? initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(f.recaptchaSiteKey), isTokenAutoRefreshEnabled: true })
+      : null;
     const auth = getAuth(app);
     return {
       getToken: async () => {
         if (!auth.currentUser) await signInAnonymously(auth);
         return auth.currentUser!.getIdToken();
       },
-      getAppCheck: async () => (await getToken(appCheck)).token,
+      getAppCheck: async () => (appCheck ? (await getToken(appCheck)).token : ""),
     };
   })();
   return firebaseReady;
@@ -38,5 +38,6 @@ function devUid(): string {
 export async function authHeaders(): Promise<Record<string, string>> {
   if (config.authMode === "dev") return { "X-Dev-User": `anon:${devUid()}` };
   const fb = await initFirebase();
-  return { Authorization: `Bearer ${await fb.getToken()}`, "X-Firebase-AppCheck": await fb.getAppCheck() };
+  const appCheck = await fb.getAppCheck();
+  return { Authorization: `Bearer ${await fb.getToken()}`, ...(appCheck ? { "X-Firebase-AppCheck": appCheck } : {}) };
 }
