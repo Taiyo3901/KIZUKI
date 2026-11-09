@@ -115,3 +115,15 @@ firebase deploy --only hosting
 | 写真バケットの `uploads/` | 1 日で自動削除（元画像） | `infra/storage-lifecycle.json` |
 | Firestore `uploadRequests`（回数制限の記録） | `expireAt`（作成の 1 日後）で自動削除 | `gcloud firestore fields ttls update expireAt --collection-group=uploadRequests --enable-ttl` |
 | Cloud Run | 使わないときは 0 台へ縮む（`analyzer`）。`api` は動作を速くするため常時 1 台。デモ後は 0 に戻す | `gcloud run services update api --min-instances 0 ...` |
+
+### Cloud Run の大きさ（実測にもとづく）
+
+名古屋城の写真（2048×1536）で測ったピークは、`analyzer` が約 850MB（CPU 時間 約 5.6 秒）、`api` が約 170MB です。
+
+| サービス | 変更前 | 変更後 |
+|---|---|---|
+| analyzer | 2Gi／2 CPU | 1.5Gi／1 CPU |
+| api | 1Gi／1 CPU | 512Mi／1 CPU |
+
+変更コマンド：`gcloud run deploy <service> --image <image> --cpu 1 --memory 1536Mi`（analyzer）／`--memory 512Mi`（api）。
+メモリ不足（`Memory limit exceeded`）がログに出たら、analyzer を 2Gi に戻してください。
