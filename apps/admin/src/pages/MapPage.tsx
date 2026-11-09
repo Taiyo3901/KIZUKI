@@ -129,31 +129,55 @@ export default function MapPage() {
   const shown = spots?.filter((s) => (!only || s.status === only) && inGroup(s)) ?? [];
   const current = spots?.find((s) => s.spotId === selected) ?? null;
 
+  // 1) The map itself is created exactly once. (Creating it again whenever the data changed let two runs build a map
+  //    on the same element at the same time, which left it blank until the page was visited again.)
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const libsRef = useRef<{ Pin: typeof google.maps.marker.PinElement; Marker: typeof google.maps.marker.AdvancedMarkerElement } | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const firstCenter = useRef<{ lat: number; lng: number } | null>(null);
+  if (spots && !firstCenter.current) firstCenter.current = spots[0]?.location ?? { lat: 35.68, lng: 139.77 };
+  const haveSpots = spots !== null;
+
   useEffect(() => {
-    if (!spots || !hasMaps || !el.current) return;
+    if (!haveSpots || !hasMaps || mapRef.current || !el.current) return;
     let cancelled = false;
     loadMaps()
       .then(async () => {
-        if (cancelled || !el.current) return;
         const { Map } = (await google.maps.importLibrary("maps")) as google.maps.MapsLibrary;
         const { AdvancedMarkerElement, PinElement } = (await google.maps.importLibrary("marker")) as google.maps.MarkerLibrary;
-        const map = new Map(el.current, { center: shown[0]?.location ?? spots[0]?.location ?? { lat: 35.68, lng: 139.77 }, zoom: 18, mapId: "DEMO_MAP_ID", mapTypeId: "hybrid" });
-        mapRef.current = map;
-        const bounds = new google.maps.LatLngBounds();
-        for (const s of shown) {
-          const pin = new PinElement({ background: SPOT_COLOR[s.status], borderColor: "#fff", glyphColor: "#fff" });
-          const marker = new AdvancedMarkerElement({ map, position: s.location, title: `${s.name}（${SPOT_LABEL[s.status]}）`, content: pin.element });
-          marker.addListener("click", () => setSelected(s.spotId));
-          bounds.extend(s.location);
-        }
-        if (shown.length > 1) map.fitBounds(bounds);
+        if (cancelled || mapRef.current || !el.current) return;
+        mapRef.current = new Map(el.current, { center: firstCenter.current!, zoom: 18, mapId: "DEMO_MAP_ID", mapTypeId: "hybrid" });
+        libsRef.current = { Pin: PinElement, Marker: AdvancedMarkerElement };
+        setMapReady(true);
       })
-      .catch(() => setMapFailed(true));
+      .catch((e) => {
+        console.error("map failed", e);
+        setMapFailed(true);
+      });
     return () => {
       cancelled = true;
     };
+  }, [haveSpots]);
+
+  // 2) Pins follow the data and the filters; the map is left alone.
+  useEffect(() => {
+    const map = mapRef.current;
+    const libs = libsRef.current;
+    if (!mapReady || !map || !libs) return;
+    for (const m of markersRef.current) m.map = null;
+    markersRef.current = [];
+    const bounds = new google.maps.LatLngBounds();
+    for (const s of shown) {
+      const pin = new libs.Pin({ background: SPOT_COLOR[s.status], borderColor: "#fff", glyphColor: "#fff" });
+      const marker = new libs.Marker({ map, position: s.location, title: `${s.name}（${SPOT_LABEL[s.status]}）`, content: pin.element });
+      marker.addListener("click", () => setSelected(s.spotId));
+      markersRef.current.push(marker);
+      bounds.extend(s.location);
+    }
+    if (shown.length > 1) map.fitBounds(bounds);
+    else if (shown.length === 1) map.setCenter(shown[0].location);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spots, only, groupFilter, groups]);
+  }, [mapReady, spots, only, groupFilter, groups]);
 
   useEffect(() => {
     if (current) mapRef.current?.panTo(current.location);
