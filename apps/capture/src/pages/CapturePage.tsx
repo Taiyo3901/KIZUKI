@@ -15,6 +15,33 @@ const RING_LEN = 2 * Math.PI * RING_R;
 const SEEN_KEY = "kizuki.notes.seen";
 /** After an automatic shot the shutter waits until the view has clearly moved off, so it does not fire again and again. */
 const REARM_BELOW = 0.6;
+/**
+ * Like the phone's own camera app: when the phone is held sideways the controls stay on the edge that is the
+ * phone's bottom (right edge when its top points left, left edge when it points right), and the text turns vertical
+ * so it still reads upright. `""` = portrait (or a big screen), where nothing changes.
+ */
+type Side = "" | "right" | "left";
+const SIDEWAYS = "(orientation: landscape) and (pointer: coarse) and (max-height: 520px)";
+function readSide(): Side {
+  if (typeof window === "undefined" || !window.matchMedia?.(SIDEWAYS).matches) return "";
+  const a = screen.orientation?.angle ?? (window as unknown as { orientation?: number }).orientation ?? 90;
+  return a === 90 ? "right" : "left"; // 90 = phone turned counter-clockwise (top points left); 270 / -90 = the other way
+}
+function useSide(): Side {
+  const [side, setSide] = useState<Side>(readSide);
+  useEffect(() => {
+    const on = () => setSide(readSide());
+    window.addEventListener("resize", on);
+    window.addEventListener("orientationchange", on);
+    screen.orientation?.addEventListener?.("change", on);
+    return () => {
+      window.removeEventListener("resize", on);
+      window.removeEventListener("orientationchange", on);
+      screen.orientation?.removeEventListener?.("change", on);
+    };
+  }, []);
+  return side;
+}
 type Phase = "loading" | "ready" | "error";
 type Shot = {
   id: number; blob: Blob; thumb: string; name: string; status: "sending" | "sent" | "failed"; error?: string;
@@ -66,6 +93,7 @@ export default function CapturePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const refImgRef = useRef<HTMLImageElement>(null);
   const shooting = useRef(false);
+  const side = useSide();
 
   const [spot, setSpot] = useState<PublicSpot | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
@@ -268,7 +296,7 @@ export default function CapturePage() {
   const last = shots[shots.length - 1];
 
   return (
-    <main className="capture">
+    <main className={`capture${side ? ` sideways ${side}` : ""}`}>
       <div className={`viewfinder${aligned ? " aligned" : ""}`} onPointerDown={onPointerDown} onPointerMove={onPointerMove}
            onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd}>
         <video ref={videoRef} playsInline muted style={digital > 1 ? { transform: `scale(${digital})` } : undefined} />
