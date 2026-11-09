@@ -68,8 +68,7 @@ def test_public_spot_info_has_reference_urls_and_no_admin_data(env):
     c, st = env
     body = c.get(f"/spots/{spot_id(st)}").json()
     assert body["name"] and body["references"][0]["url"].startswith("http")
-    assert set(body) == {"spotId", "name", "standingNote", "guideText", "guideLayout", "guideLayoutPortrait", "location", "references"}
-    assert set(body["location"]) == {"lat", "lng"}
+    assert set(body) == {"spotId", "name", "standingNote", "guideText", "guideLayout", "guideLayoutPortrait", "references"}
     assert c.get("/spots/nope").status_code == 404
 
 

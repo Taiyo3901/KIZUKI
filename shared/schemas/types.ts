@@ -100,6 +100,5 @@ export interface PublicSpot {
   guideText: string;
   guideLayout?: GuideLayout | null;
   guideLayoutPortrait?: GuideLayout | null;
-  location: { lat: number; lng: number };
   references: { referenceId: string; url: string; season?: Season | null; timeOfDay?: TimeOfDay | null }[];
 }

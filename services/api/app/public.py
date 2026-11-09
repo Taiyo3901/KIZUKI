@@ -19,12 +19,11 @@ def get_spot(spot_id: str, st: State = Depends(get_state)) -> dict:
     refs = [{"referenceId": r.id, "season": r.data.season, "timeOfDay": r.data.timeOfDay,
              "url": st.storage.signed_download_url(r.data.storagePath, SETTINGS.download_url_expires_s)}
             for r in st.repo.list_references(spot_id)]
-    # `location` lets the phone check, on the phone only, whether the visitor is near the spot. It is the spot's
-    # position (printed on the QR sign anyway), never the visitor's.
+    # no `location`: tourists' phones neither need nor receive any position (the admin map reads it separately)
     return {"spotId": spot_id, "name": spot.name, "standingNote": spot.standingNote, "guideText": spot.guideText,
             "guideLayout": spot.guideLayout.model_dump() if spot.guideLayout else None,
             "guideLayoutPortrait": spot.guideLayoutPortrait.model_dump() if spot.guideLayoutPortrait else None,
-            "location": spot.location.model_dump(), "references": refs}
+            "references": refs}
 
 
 @router.post("/spots/{spot_id}/upload-url", dependencies=[Depends(verify_app_check)])
